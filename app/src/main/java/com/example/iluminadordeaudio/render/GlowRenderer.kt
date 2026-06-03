@@ -21,9 +21,10 @@ class GlowRenderer {
         canvas: Canvas,
         amplitude: Float,
         bgColor: Int,
-        glowColor: Int = Color.WHITE
+        glowColor: Int = Color.WHITE,
+        clearBackground: Boolean = true
     ) {
-        canvas.drawColor(bgColor)
+        if (clearBackground) canvas.drawColor(bgColor)
 
         // Sensibilidad +80 % antes de clampear
         val norm = (amplitude * 1.8f).coerceIn(0f, 1f)

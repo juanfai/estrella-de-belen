@@ -60,14 +60,28 @@ class VideoExporter(
         val encoder = VideoEncoder(width, height, fps, outputFile)
         val renderer = GlowRenderer()
 
-        // El mismo ataque/decaimiento del preview para que el video exportado sea idéntico
+        val haloColor = android.graphics.Color.rgb(160, 0, 255)
         var smoothedAmp = 0f
+        var haloAmp     = 0f
         rmsFrames.forEachIndexed { i, targetAmp ->
-            val factor = if (targetAmp >= smoothedAmp) 0.35f else 0.07f
-            smoothedAmp += (targetAmp - smoothedAmp) * factor
+            val wFactor = if (targetAmp >= smoothedAmp) 0.35f else 0.07f
+            smoothedAmp += (targetAmp - smoothedAmp) * wFactor
+
+            val hFactor = if (targetAmp >= haloAmp) 0.35f else 0.040f  // ~30fps equiv.
+            haloAmp += (targetAmp - haloAmp) * hFactor
 
             val canvas = encoder.inputSurface.lockCanvas(null)
-            renderer.drawFrame(canvas, smoothedAmp, bgColor, glowColor)
+
+            // Stretch vertical (mismo umbral que el preview)
+            val excess = ((smoothedAmp - 0.58f) / (1f - 0.58f)).coerceIn(0f, 1f)
+            canvas.save()
+            if (excess > 0f) {
+                canvas.scale(1f, 1f + excess * 0.77f, width / 2f, height / 2f)
+            }
+            renderer.drawFrame(canvas, haloAmp, bgColor, haloColor, clearBackground = true)
+            renderer.drawFrame(canvas, smoothedAmp, bgColor, glowColor, clearBackground = false)
+            canvas.restore()
+
             encoder.inputSurface.unlockCanvasAndPost(canvas)
             encoder.drainEncoder(false)
             onFrame(i)

@@ -28,6 +28,8 @@ import com.example.iluminadordeaudio.render.GlowRenderer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
+private val HALO_COLOR = android.graphics.Color.rgb(60, 0, 255)  // violeta eléctrico
+
 @Composable
 fun PreviewScreen(
     viewModel: MainViewModel,
@@ -54,14 +56,21 @@ fun PreviewScreen(
         var audioFrame  = 0
         var displayTick = 0
         var smoothedAmp = 0f
+        var haloAmp     = 0f
         while (isActive) {
             val frames = rmsFrames
             val targetAmp = if (frames != null && frames.isNotEmpty())
                 frames[audioFrame % frames.size] else 0f
-            val factor = if (targetAmp >= smoothedAmp) 0.35f else 0.07f
-            smoothedAmp += (targetAmp - smoothedAmp) * factor
 
-            // Stretch vertical en picos fuertes: escalar el canvas nativo antes de dibujar
+            // Glow blanco: ataque rápido, decaimiento normal
+            val wFactor = if (targetAmp >= smoothedAmp) 0.35f else 0.07f
+            smoothedAmp += (targetAmp - smoothedAmp) * wFactor
+
+            // Halo violeta: mismo ataque, decaimiento mucho más lento (3× más lento)
+            val hFactor = if (targetAmp >= haloAmp) 0.35f else 0.025f
+            haloAmp += (targetAmp - haloAmp) * hFactor
+
+            // Stretch vertical en picos fuertes (basado en el glow blanco)
             val excess = ((smoothedAmp - 0.58f) / (1f - 0.58f)).coerceIn(0f, 1f)
             softCanvas.save()
             if (excess > 0f) {
@@ -70,8 +79,12 @@ fun PreviewScreen(
                     previewBitmap.width * 0.5f, previewBitmap.height * 0.5f
                 )
             }
+            // 1.ª pasada: halo violeta (limpia el fondo)
+            renderer.drawFrame(softCanvas, haloAmp,
+                android.graphics.Color.BLACK, HALO_COLOR, clearBackground = true)
+            // 2.ª pasada: glow blanco encima (sin limpiar)
             renderer.drawFrame(softCanvas, smoothedAmp,
-                android.graphics.Color.BLACK, android.graphics.Color.WHITE)
+                android.graphics.Color.BLACK, android.graphics.Color.WHITE, clearBackground = false)
             softCanvas.restore()
 
             renderTick++
