@@ -3,18 +3,19 @@ package com.example.iluminadordeaudio.render
 import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.Shader
 
 /**
- * Requiere canvas de software para que BlurMaskFilter funcione.
- * Todos los tamaños son relativos a min(w, h) → escala igual en preview y en export.
+ * Requiere canvas de software (no hardware-accelerated) para que BlurMaskFilter funcione.
+ *
+ * El efecto usa capas de elipses progresivas: la más ancha y achatada produce la estela
+ * horizontal, las capas intermedias hacen la transición, y las capas más circulares forman
+ * el resplandor central. Al ser todas elipses con blur del mismo color se fusionan de forma
+ * natural sin parecer dos elementos superpuestos.
  */
 class GlowRenderer {
 
-    private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val glowPaint  = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     fun drawFrame(
         canvas: Canvas,
@@ -22,66 +23,61 @@ class GlowRenderer {
         bgColor: Int,
         glowColor: Int = Color.WHITE
     ) {
-        val w  = canvas.width.toFloat()
-        val h  = canvas.height.toFloat()
-        val cx = w / 2f
-        val cy = h / 2f
-        // Sensibilidad +50 % antes de clampear
-        val norm = (amplitude * 1.5f).coerceIn(0f, 1f)
-        val ref  = minOf(w, h)   // dimensión de referencia para escalar
-
         canvas.drawColor(bgColor)
+
+        // Sensibilidad +80 % antes de clampear
+        val norm = (amplitude * 1.8f).coerceIn(0f, 1f)
         if (norm == 0f) return
 
-        drawTrail(canvas, norm, glowColor, cx, cy, w, ref)
-        drawGlow(canvas, norm, glowColor, cx, cy, ref)
+        val w   = canvas.width.toFloat()
+        val h   = canvas.height.toFloat()
+        val cx  = w / 2f
+        val cy  = h / 2f
+        val ref = minOf(w, h)
+
+        drawFused(canvas, norm, glowColor, cx, cy, w, ref)
     }
 
-    private fun drawTrail(
+    /**
+     * Cada fila = [ halfWidth, halfHeight, alpha, blurRadius ]
+     * Las primeras filas = estela horizontal (ancha y fina)
+     * Las últimas filas  = núcleo circular brillante
+     * Las intermedias    = zona de fusión
+     */
+    private fun drawFused(
         canvas: Canvas,
         norm: Float,
         glowColor: Int,
-        cx: Float, cy: Float, w: Float, ref: Float
+        cx: Float, cy: Float,
+        w: Float, ref: Float
     ) {
-        val alpha = (norm * 210).toInt().coerceIn(0, 255)
-        val r = Color.red(glowColor); val g = Color.green(glowColor); val b = Color.blue(glowColor)
-        trailPaint.shader = LinearGradient(
-            0f, cy, w, cy,
-            intArrayOf(Color.argb(0, r, g, b), Color.argb(alpha, r, g, b),
-                       Color.argb(alpha, r, g, b), Color.argb(0, r, g, b)),
-            floatArrayOf(0f, 0.25f, 0.75f, 1f),
-            Shader.TileMode.CLAMP
+        val layers = arrayOf(
+            // ── Estela horizontal ─────────────────────────────────────────────
+            floatArrayOf(w * 0.500f,          norm * ref * 0.028f, norm * 0.13f, norm * ref * 0.038f),
+            floatArrayOf(norm * ref * 0.520f,  norm * ref * 0.050f, norm * 0.10f, norm * ref * 0.052f),
+            // ── Zona de transición / fusión ───────────────────────────────────
+            floatArrayOf(norm * ref * 0.380f,  norm * ref * 0.095f, norm * 0.13f, norm * ref * 0.058f),
+            floatArrayOf(norm * ref * 0.260f,  norm * ref * 0.175f, norm * 0.16f, norm * ref * 0.056f),
+            floatArrayOf(norm * ref * 0.180f,  norm * ref * 0.155f, norm * 0.25f, norm * ref * 0.050f),
+            // ── Glow circular ─────────────────────────────────────────────────
+            floatArrayOf(norm * ref * 0.105f,  norm * ref * 0.095f, norm * 0.50f, norm * ref * 0.034f),
+            floatArrayOf(norm * ref * 0.052f,  norm * ref * 0.048f, norm * 0.88f, norm * ref * 0.015f),
+            // ── Núcleo duro (sin blur) ────────────────────────────────────────
+            floatArrayOf(norm * ref * 0.018f,  norm * ref * 0.017f, 1.00f,       0f),
         )
-        val trailH = ref * (0.006f + norm * 0.028f)
-        canvas.drawRect(0f, cy - trailH / 2f, w, cy + trailH / 2f, trailPaint)
-    }
 
-    private fun drawGlow(
-        canvas: Canvas,
-        norm: Float,
-        glowColor: Int,
-        cx: Float, cy: Float, ref: Float
-    ) {
-        // Cada entrada: (radio, alpha, factor de blur)
-        // Las capas exteriores crean el halo difuso (~1/3 de pantalla).
-        // Las capas interiores crean el núcleo brillante notorio.
-        val layers = listOf(
-            Triple(norm * ref * 0.45f,  norm * 0.05f, 0.55f),   // halo exterior suave
-            Triple(norm * ref * 0.28f,  norm * 0.13f, 0.55f),   // halo medio
-            Triple(norm * ref * 0.15f,  norm * 0.35f, 0.50f),   // brillo interior
-            Triple(norm * ref * 0.07f,  norm * 0.85f, 0.38f),   // núcleo brillante
-            Triple(norm * ref * 0.030f, 0.98f,        0.20f),   // punto central intenso
-            Triple(norm * ref * 0.012f, 1.00f,        0.00f),   // núcleo duro sin blur (punto blanco puro)
-        )
-        layers.forEach { (radius, alpha, blurFactor) ->
-            if (radius <= 0f) return@forEach
-            glowPaint.reset()
-            glowPaint.isAntiAlias = true
-            glowPaint.color = glowColor
-            glowPaint.alpha = (alpha * 255).toInt().coerceIn(0, 255)
-            val blurR = radius * blurFactor
-            glowPaint.maskFilter = if (blurR > 0f) BlurMaskFilter(blurR, BlurMaskFilter.Blur.NORMAL) else null
-            canvas.drawCircle(cx, cy, radius, glowPaint)
+        layers.forEach { layer ->
+            val hw    = layer[0]
+            val hh    = layer[1]
+            val alpha = layer[2]
+            val blur  = layer[3]
+            if (hw <= 0f || hh <= 0f) return@forEach
+            paint.reset()
+            paint.isAntiAlias = true
+            paint.color  = glowColor
+            paint.alpha  = (alpha * 255).toInt().coerceIn(0, 255)
+            paint.maskFilter = if (blur > 0f) BlurMaskFilter(blur, BlurMaskFilter.Blur.NORMAL) else null
+            canvas.drawOval(cx - hw, cy - hh, cx + hw, cy + hh, paint)
         }
     }
 }
