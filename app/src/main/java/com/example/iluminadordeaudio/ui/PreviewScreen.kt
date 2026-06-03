@@ -15,7 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
@@ -48,7 +48,7 @@ fun PreviewScreen(
     val softCanvas         = remember { ACanvas(previewBitmap) }
     val previewImageBitmap = remember { previewBitmap.asImageBitmap() }
     val renderer           = remember { GlowRenderer() }
-    var renderTick         by remember { mutableIntStateOf(0) }
+    var renderTick by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(rmsFrames) {
         var audioFrame  = 0
@@ -56,16 +56,26 @@ fun PreviewScreen(
         var smoothedAmp = 0f
         while (isActive) {
             val frames = rmsFrames
-            // Leer PRIMERO el frame actual, luego avanzar
             val targetAmp = if (frames != null && frames.isNotEmpty())
                 frames[audioFrame % frames.size] else 0f
             val factor = if (targetAmp >= smoothedAmp) 0.35f else 0.07f
             smoothedAmp += (targetAmp - smoothedAmp) * factor
+
+            // Stretch vertical en picos fuertes: escalar el canvas nativo antes de dibujar
+            val excess = ((smoothedAmp - 0.74f) / (1f - 0.74f)).coerceIn(0f, 1f)
+            softCanvas.save()
+            if (excess > 0f) {
+                softCanvas.scale(
+                    1f, 1f + excess * 0.18f,
+                    previewBitmap.width * 0.5f, previewBitmap.height * 0.5f
+                )
+            }
             renderer.drawFrame(softCanvas, smoothedAmp,
                 android.graphics.Color.BLACK, android.graphics.Color.WHITE)
+            softCanvas.restore()
+
             renderTick++
             displayTick++
-            // Avanzar frame de audio cada 2 frames de display (60fps / 30fps)
             if (displayTick % 2 == 0 && frames != null && frames.isNotEmpty()) audioFrame++
             delay(16L)
         }
@@ -96,7 +106,6 @@ fun PreviewScreen(
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     @Suppress("UNUSED_EXPRESSION") renderTick
-                    // Escalar con FilterQuality.High (bicúbico) para suavizar el upscale
                     drawImage(
                         image         = previewImageBitmap,
                         dstSize       = IntSize(size.width.toInt(), size.height.toInt()),
