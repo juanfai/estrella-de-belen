@@ -62,11 +62,11 @@ fun PreviewScreen(
             smoothedAmp += (targetAmp - smoothedAmp) * factor
 
             // Stretch vertical en picos fuertes: escalar el canvas nativo antes de dibujar
-            val excess = ((smoothedAmp - 0.74f) / (1f - 0.74f)).coerceIn(0f, 1f)
+            val excess = ((smoothedAmp - 0.58f) / (1f - 0.58f)).coerceIn(0f, 1f)
             softCanvas.save()
             if (excess > 0f) {
                 softCanvas.scale(
-                    1f, 1f + excess * 0.18f,
+                    1f, 1f + excess * 0.77f,
                     previewBitmap.width * 0.5f, previewBitmap.height * 0.5f
                 )
             }
