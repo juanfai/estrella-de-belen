@@ -1,0 +1,80 @@
+package com.example.iluminadordeaudio.ui
+
+import android.app.Application
+import android.graphics.Color
+import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.iluminadordeaudio.audio.AudioAnalyzer
+import com.example.iluminadordeaudio.audio.AudioDecoder
+import com.example.iluminadordeaudio.export.VideoExporter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class ExportState(
+    val isExporting: Boolean = false,
+    val progress: Float = 0f,
+    val exportedUri: Uri? = null,
+    val error: String? = null
+)
+
+class MainViewModel(app: Application) : AndroidViewModel(app) {
+
+    private val ctx = app.applicationContext
+
+    private val _audioUri = MutableStateFlow<Uri?>(null)
+    val audioUri: StateFlow<Uri?> = _audioUri.asStateFlow()
+
+    val outputName = MutableStateFlow("AudioVisual")
+
+    private val _rmsFrames = MutableStateFlow<FloatArray?>(null)
+    val rmsFrames: StateFlow<FloatArray?> = _rmsFrames.asStateFlow()
+
+    private val _exportState = MutableStateFlow(ExportState())
+    val exportState: StateFlow<ExportState> = _exportState.asStateFlow()
+
+    private val _audioName = MutableStateFlow<String?>(null)
+    val audioName: StateFlow<String?> = _audioName.asStateFlow()
+
+    fun loadAudio(uri: Uri, displayName: String?) {
+        _audioUri.value = uri
+        _audioName.value = displayName
+        _rmsFrames.value = null
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = AudioDecoder().decodeToPcm(ctx, uri)
+                _rmsFrames.value = AudioAnalyzer().rmsPerFrame(result.pcm, result.sampleRate, 30)
+            } catch (e: Exception) {
+                _exportState.value = ExportState(error = "Error al cargar audio: ${e.message}")
+            }
+        }
+    }
+
+    fun startExport() {
+        val uri = _audioUri.value ?: return
+        if (_exportState.value.isExporting) return
+
+        _exportState.value = ExportState(isExporting = true)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val resultUri = VideoExporter(
+                    context    = ctx,
+                    audioUri   = uri,
+                    outputName = outputName.value
+                ).export { progress ->
+                    _exportState.value = _exportState.value.copy(progress = progress)
+                }
+                _exportState.value = ExportState(isExporting = false, progress = 1f, exportedUri = resultUri)
+            } catch (e: Exception) {
+                _exportState.value = ExportState(isExporting = false, error = "Error al exportar: ${e.message}")
+            }
+        }
+    }
+
+    fun clearExportState() {
+        _exportState.value = ExportState()
+    }
+}
