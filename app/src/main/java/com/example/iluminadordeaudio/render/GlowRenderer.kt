@@ -75,6 +75,7 @@ class GlowRenderer {
             if (hw <= 0f || hh <= 0f) return@forEach
             paint.reset()
             paint.isAntiAlias = true
+            paint.isDither    = true
             paint.color  = glowColor
             paint.alpha  = (alpha * 255).toInt().coerceIn(0, 255)
             paint.maskFilter = if (blur > 0f) BlurMaskFilter(blur, BlurMaskFilter.Blur.NORMAL) else null

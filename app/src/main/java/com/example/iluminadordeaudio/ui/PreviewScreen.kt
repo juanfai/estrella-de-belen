@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
@@ -42,8 +43,8 @@ fun PreviewScreen(
 
     var showExportDialog by remember { mutableStateOf(false) }
 
-    // Bitmap 9:16 para la preview (canvas de software → BlurMaskFilter funciona)
-    val previewBitmap      = remember { Bitmap.createBitmap(270, 480, Bitmap.Config.ARGB_8888) }
+    // Bitmap 9:16 para la preview — 405×720 da buena base sin penalizar el blur en CPU
+    val previewBitmap      = remember { Bitmap.createBitmap(405, 720, Bitmap.Config.ARGB_8888) }
     val softCanvas         = remember { ACanvas(previewBitmap) }
     val previewImageBitmap = remember { previewBitmap.asImageBitmap() }
     val renderer           = remember { GlowRenderer() }
@@ -95,10 +96,11 @@ fun PreviewScreen(
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     @Suppress("UNUSED_EXPRESSION") renderTick
-                    // Escalar el bitmap para llenar el Canvas
+                    // Escalar con FilterQuality.High (bicúbico) para suavizar el upscale
                     drawImage(
-                        image   = previewImageBitmap,
-                        dstSize = IntSize(size.width.toInt(), size.height.toInt())
+                        image         = previewImageBitmap,
+                        dstSize       = IntSize(size.width.toInt(), size.height.toInt()),
+                        filterQuality = FilterQuality.High
                     )
                 }
                 if (rmsFrames == null && audioUri != null) {
