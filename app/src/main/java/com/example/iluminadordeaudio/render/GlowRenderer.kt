@@ -33,7 +33,8 @@ class GlowRenderer {
         val h   = canvas.height.toFloat()
         val cx  = w / 2f
         val cy  = h / 2f
-        val ref = minOf(w, h)
+        // Escalar el área de referencia un 25 % para toda la forma
+        val ref = minOf(w, h) * 1.25f
 
         drawFused(canvas, norm, glowColor, cx, cy, w, ref)
     }

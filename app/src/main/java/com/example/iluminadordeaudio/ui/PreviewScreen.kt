@@ -55,7 +55,7 @@ fun PreviewScreen(
         var smoothedAmp = 0f
         while (isActive) {
             val frames = rmsFrames
-            if (displayTick % 2 == 0 && frames != null && frames.isNotEmpty()) audioFrame++
+            // Leer PRIMERO el frame actual, luego avanzar
             val targetAmp = if (frames != null && frames.isNotEmpty())
                 frames[audioFrame % frames.size] else 0f
             val factor = if (targetAmp >= smoothedAmp) 0.35f else 0.07f
@@ -64,6 +64,8 @@ fun PreviewScreen(
                 android.graphics.Color.BLACK, android.graphics.Color.WHITE)
             renderTick++
             displayTick++
+            // Avanzar frame de audio cada 2 frames de display (60fps / 30fps)
+            if (displayTick % 2 == 0 && frames != null && frames.isNotEmpty()) audioFrame++
             delay(16L)
         }
     }

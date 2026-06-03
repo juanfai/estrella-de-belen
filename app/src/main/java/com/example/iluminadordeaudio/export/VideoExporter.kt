@@ -113,16 +113,18 @@ class VideoExporter(
         val buffer = ByteBuffer.allocate(2 * 1024 * 1024)
         val info = MediaCodec.BufferInfo()
 
-        // Copiar video
+        // Copiar video normalizando los PTS a base-0 (el encoder usa reloj de sistema)
+        var videoFrameIdx = 0L
         while (true) {
             val size = videoExtractor.readSampleData(buffer, 0)
             if (size < 0) break
             info.offset = 0
             info.size = size
-            info.presentationTimeUs = videoExtractor.sampleTime
+            info.presentationTimeUs = videoFrameIdx * 1_000_000L / fps
             info.flags = videoExtractor.sampleFlags
             muxer.writeSampleData(muxVideoTrack, buffer, info)
             videoExtractor.advance()
+            videoFrameIdx++
         }
         videoExtractor.release()
 
