@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.iluminadordeaudio.render.GlowRenderer
@@ -39,14 +40,16 @@ fun PreviewScreen(
     val exportState by viewModel.exportState.collectAsState()
     val outputName  by viewModel.outputName.collectAsState()
 
-    // Bitmap fijo 9:16 para la preview
-    val previewBitmap     = remember { Bitmap.createBitmap(270, 480, Bitmap.Config.ARGB_8888) }
-    val softCanvas        = remember { ACanvas(previewBitmap) }
-    val previewImageBitmap = remember { previewBitmap.asImageBitmap() }
-    val renderer          = remember { GlowRenderer() }
-    var renderTick        by remember { mutableIntStateOf(0) }
+    var showExportDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(rmsFrames, softCanvas) {
+    // Bitmap 9:16 para la preview (canvas de software → BlurMaskFilter funciona)
+    val previewBitmap      = remember { Bitmap.createBitmap(270, 480, Bitmap.Config.ARGB_8888) }
+    val softCanvas         = remember { ACanvas(previewBitmap) }
+    val previewImageBitmap = remember { previewBitmap.asImageBitmap() }
+    val renderer           = remember { GlowRenderer() }
+    var renderTick         by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(rmsFrames) {
         var audioFrame  = 0
         var displayTick = 0
         var smoothedAmp = 0f
@@ -73,7 +76,7 @@ fun PreviewScreen(
             .background(Color.Black)
             .systemBarsPadding()
     ) {
-        // ── Preview centrada horizontalmente ───────────────────────────────────
+        // ── Preview centrada, bordecito ────────────────────────────────────────
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -90,11 +93,15 @@ fun PreviewScreen(
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     @Suppress("UNUSED_EXPRESSION") renderTick
-                    drawImage(previewImageBitmap)
+                    // Escalar el bitmap para llenar el Canvas
+                    drawImage(
+                        image   = previewImageBitmap,
+                        dstSize = IntSize(size.width.toInt(), size.height.toInt())
+                    )
                 }
                 if (rmsFrames == null && audioUri != null) {
                     CircularProgressIndicator(
-                        color = Color.White,
+                        color    = Color.White,
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
@@ -110,32 +117,19 @@ fun PreviewScreen(
                 .padding(bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Nombre del archivo de audio
             Text(
-                text = audioName ?: "Sin audio seleccionado",
-                color = Color.Gray,
-                fontSize = 12.sp,
+                text      = audioName ?: "Sin audio seleccionado",
+                color     = Color.Gray,
+                fontSize  = 12.sp,
                 textAlign = TextAlign.Center,
-                maxLines = 1,
-                modifier = Modifier.fillMaxWidth()
+                maxLines  = 1,
+                modifier  = Modifier.fillMaxWidth()
             )
 
-            // Nombre del archivo de salida
-            OutlinedTextField(
-                value = outputName,
-                onValueChange = { viewModel.outputName.value = it },
-                label = { Text("Nombre del archivo") },
-                suffix = { Text(".mp4", color = Color.Gray) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Importar audio
             Button(onClick = onPickAudio, modifier = Modifier.fillMaxWidth()) {
                 Text(if (audioUri == null) "Importar audio" else "Cambiar audio")
             }
 
-            // Exportar / progreso
             if (exportState.isExporting) {
                 LinearProgressIndicator(
                     progress = { exportState.progress },
@@ -147,7 +141,7 @@ fun PreviewScreen(
                 )
             } else {
                 Button(
-                    onClick  = onExport,
+                    onClick  = { showExportDialog = true },
                     modifier = Modifier.fillMaxWidth(),
                     enabled  = audioUri != null && rmsFrames != null
                 ) { Text("Exportar video") }
@@ -156,11 +150,11 @@ fun PreviewScreen(
             // Resultado — toca para abrir el video
             exportState.exportedUri?.let { uri ->
                 Text(
-                    text = "¡Video guardado! Toca para abrirlo.",
-                    color = Color(0xFF66BB6A),
-                    fontSize = 13.sp,
+                    text      = "¡Video guardado! Toca para abrirlo.",
+                    color     = Color(0xFF66BB6A),
+                    fontSize  = 13.sp,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier
+                    modifier  = Modifier
                         .fillMaxWidth()
                         .clickable {
                             val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -173,21 +167,69 @@ fun PreviewScreen(
                         .padding(vertical = 4.dp)
                 )
                 TextButton(
-                    onClick = viewModel::clearExportState,
+                    onClick  = viewModel::clearExportState,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 ) { Text("OK", color = Color.Gray) }
             }
 
             exportState.error?.let { err ->
                 Text(
-                    err, color = Color(0xFFEF5350), fontSize = 13.sp,
-                    textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()
+                    err,
+                    color     = Color(0xFFEF5350),
+                    fontSize  = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier  = Modifier.fillMaxWidth()
                 )
                 TextButton(
-                    onClick = viewModel::clearExportState,
+                    onClick  = viewModel::clearExportState,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 ) { Text("Cerrar", color = Color.Gray) }
             }
         }
     }
+
+    // ── Modal nombre de archivo ────────────────────────────────────────────────
+    if (showExportDialog) {
+        ExportNameDialog(
+            initialName = outputName,
+            onConfirm   = { name ->
+                viewModel.outputName.value = name
+                showExportDialog = false
+                onExport()
+            },
+            onDismiss = { showExportDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun ExportNameDialog(
+    initialName: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(initialName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title   = { Text("Nombre del archivo") },
+        text    = {
+            OutlinedTextField(
+                value         = name,
+                onValueChange = { name = it },
+                suffix        = { Text(".mp4", color = Color.Gray) },
+                singleLine    = true,
+                modifier      = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick  = { onConfirm(name) },
+                enabled  = name.isNotBlank()
+            ) { Text("Exportar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
 }
