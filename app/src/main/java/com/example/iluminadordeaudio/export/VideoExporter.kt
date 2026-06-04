@@ -73,7 +73,7 @@ class VideoExporter(
             val canvas = encoder.inputSurface.lockCanvas(null)
 
             // Stretch vertical (mismo umbral que el preview)
-            val excess = ((smoothedAmp - 0.58f) / (1f - 0.58f)).coerceIn(0f, 1f)
+            val excess = ((smoothedAmp - 0.44f) / (1f - 0.44f)).coerceIn(0f, 1f)
             canvas.save()
             if (excess > 0f) {
                 canvas.scale(1f, 1f + excess * 0.77f, width / 2f, height / 2f)

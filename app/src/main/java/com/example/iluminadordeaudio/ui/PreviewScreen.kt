@@ -79,7 +79,7 @@ fun PreviewScreen(
                 delay(50L)
             }
 
-            val excess = ((smoothedAmp - 0.58f) / (1f - 0.58f)).coerceIn(0f, 1f)
+            val excess = ((smoothedAmp - 0.44f) / (1f - 0.44f)).coerceIn(0f, 1f)
             softCanvas.save()
             if (excess > 0f) {
                 softCanvas.scale(1f, 1f + excess * 0.77f,

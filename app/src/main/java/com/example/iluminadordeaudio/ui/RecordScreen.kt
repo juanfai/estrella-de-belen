@@ -94,6 +94,10 @@ fun RecordScreen(
     LaunchedEffect(state) {
         while (isActive && state == RecordState.RECORDING) {
             delay(80L)
+            // Re-verificar el estado después del delay: si el usuario tocó STOP mientras
+            // el delay estaba en curso, el click ya habrá puesto cursorFraction=0 y
+            // no debemos sobreescribirlo con 1f
+            if (state != RecordState.RECORDING) break
             val norm = (audioRecorder.getMaxAmplitude() / 32767f).coerceIn(0f, 1f)
             waveform.add(norm)
             if (waveform.size > 800) {
@@ -412,9 +416,11 @@ private fun RecordBtn(blink: Boolean, isRecording: Boolean, enabled: Boolean, on
     ) {
         Canvas(modifier = Modifier.size(72.dp)) {
             val full = size.minDimension
-            // Interpolar de círculo (full, radio = full/2) a cuadrado redondeado (38% del full)
-            val side   = full   - (full   - full * 0.38f) * shapeProg
-            val corner = full/2 - (full/2 - side * 0.20f) * shapeProg
+            // Fondo negro del círculo interior — se revela cuando el rojo encoge
+            drawCircle(Color.Black, radius = full / 2f)
+            // Rojo: círculo lleno → cuadrado sin bordes redondeados
+            val side   = full - (full - full * 0.36f) * shapeProg
+            val corner = (full / 2f) * (1f - shapeProg)   // circle → 0 (sharp square)
             drawRoundRect(
                 color        = fillColor,
                 topLeft      = Offset((full - side) / 2f, (full - side) / 2f),
@@ -495,18 +501,16 @@ private fun WaveformView(
             val barW     = (step * 0.60f).coerceIn(minBarW, 6.dp.toPx())
 
             visible.forEachIndexed { i, amp ->
-                val x     = i * step + step / 2f
-                val h     = (amp * cy * 0.96f).coerceAtLeast(2f)
-                // Gradiente de LAV_DIM (antiguo) a LAV_SOFT (reciente) → profundidad temporal
-                val alpha = 0.30f + 0.70f * (i.toFloat() / count)
-                val barColor = androidx.compose.ui.graphics.lerp(LAV_DIM, LAV_SOFT, i.toFloat() / count)
-                drawLine(barColor.copy(alpha = alpha), Offset(x, cy - h), Offset(x, cy + h),
+                val x = i * step + step / 2f
+                val h = (amp * cy * 0.96f).coerceAtLeast(2f)
+                drawLine(LAV_DEEP, Offset(x, cy - h), Offset(x, cy + h),
                     strokeWidth = barW, cap = StrokeCap.Round)
             }
         }
 
-        // Cursor
-        val cx = cursorFraction.coerceIn(0f, 1f) * size.width
+        // Cursor — clampeado 5dp de cada borde para que el círculo quede siempre visible
+        val rawCx = cursorFraction.coerceIn(0f, 1f) * size.width
+        val cx    = rawCx.coerceIn(5.dp.toPx(), size.width - 5.dp.toPx())
         drawLine(cursorColor, Offset(cx, 0f), Offset(cx, size.height), strokeWidth = 2.dp.toPx())
         drawCircle(cursorColor, radius = 5.dp.toPx(), center = Offset(cx, cy),
             style = Stroke(width = 1.5f * density))
