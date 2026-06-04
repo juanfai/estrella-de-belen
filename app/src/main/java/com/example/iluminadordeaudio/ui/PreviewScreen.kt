@@ -183,7 +183,10 @@ fun PreviewScreen(
                 )
             } else {
                 AppButton(
-                    onClick  = { showExportDialog = true },
+                    onClick  = {
+                        if (isPreviewPlaying) viewModel.togglePreviewPlay()
+                        showExportDialog = true
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     enabled  = audioUri != null && rmsFrames != null
                 ) { Text("EXPORTAR VIDEO") }
@@ -208,10 +211,11 @@ fun PreviewScreen(
                         }
                         .padding(vertical = 4.dp)
                 )
-                TextButton(
+                AppButton(
                     onClick  = viewModel::clearExportState,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) { Text("OK", color = Color.Gray) }
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    filled   = true
+                ) { Text("OK") }
             }
 
             exportState.error?.let { err ->

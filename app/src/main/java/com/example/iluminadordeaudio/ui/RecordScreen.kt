@@ -108,12 +108,17 @@ fun RecordScreen(
             cursorFraction = 1f
         }
     }
-    // Cursor sigue la posición de reproducción
+    // Cursor sigue la posición de reproducción.
+    // Se captura la posición inicial para no hacer un salto mientras el seek del player se asienta:
+    // el cursor se queda en startPos hasta que el player lo alcanza, luego lo sigue suavemente.
     LaunchedEffect(state) {
-        if (state == RecordState.PLAYING) delay(350L)
-        while (isActive && state == RecordState.PLAYING) {
-            cursorFraction = player.currentPositionFraction
-            delay(80L)
+        if (state == RecordState.PLAYING) {
+            val startPos = cursorFraction
+            while (isActive && state == RecordState.PLAYING) {
+                val playerPos = player.currentPositionFraction
+                cursorFraction = if (playerPos >= startPos - 0.01f) playerPos else startPos
+                delay(80L)
+            }
         }
     }
 
