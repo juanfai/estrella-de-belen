@@ -1,9 +1,7 @@
 package com.example.iluminadordeaudio.ui
 
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas as ACanvas
-import androidx.compose.foundation.Canvas
+import android.view.TextureView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,24 +14,18 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size as GeoSize
-import androidx.compose.ui.graphics.drawscope.Stroke as DStroke
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.iluminadordeaudio.render.GlowRenderer
+import androidx.compose.ui.viewinterop.AndroidView
+import com.example.iluminadordeaudio.render.GlowPreviewRenderer
 import com.example.iluminadordeaudio.render.VisualConfig
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -59,12 +51,9 @@ fun PreviewScreen(
         exportStartMs = if (exportState.isExporting) System.currentTimeMillis() else 0L
     }
 
-    // Bitmap 9:16 para la preview — 405×720 da buena base sin penalizar el blur en CPU
-    val previewBitmap      = remember { Bitmap.createBitmap(405, 720, Bitmap.Config.ARGB_8888) }
-    val softCanvas         = remember { ACanvas(previewBitmap) }
-    val previewImageBitmap = remember { previewBitmap.asImageBitmap() }
-    val renderer           = remember { GlowRenderer() }
-    var renderTick by remember { mutableIntStateOf(0) }
+    // GL renderer — mismo shader que el export, renderiza directo en la GPU
+    val glRenderer = remember { GlowPreviewRenderer() }
+    DisposableEffect(Unit) { onDispose { glRenderer.release() } }
 
     LaunchedEffect(rmsFrames, isPreviewPlaying) {
         var smoothedAmp = 0f
@@ -72,33 +61,23 @@ fun PreviewScreen(
         while (isActive) {
             val frames = rmsFrames
             if (isPreviewPlaying && frames != null && frames.isNotEmpty()) {
-                // Sincronizar con la posición real del audio en lugar de contar ticks
-                val posMs     = viewModel.getPreviewPositionMs()
-                val frameIdx  = ((posMs * 30f) / 1000f).toInt().coerceIn(0, frames.size - 1)
-                val targetAmp = frames[frameIdx]
-                smoothedAmp += (targetAmp - smoothedAmp) * (if (targetAmp >= smoothedAmp) VisualConfig.GLOW_ATTACK else VisualConfig.GLOW_DECAY)
-                haloAmp     += (targetAmp - haloAmp)     * (if (targetAmp >= haloAmp)     VisualConfig.HALO_ATTACK else VisualConfig.HALO_DECAY_PREVIEW)
+                val posMs    = viewModel.getPreviewPositionMs()
+                val frameIdx = ((posMs * 30f) / 1000f).toInt().coerceIn(0, frames.size - 1)
+                val target   = frames[frameIdx]
+                smoothedAmp += (target - smoothedAmp) * (if (target >= smoothedAmp) VisualConfig.GLOW_ATTACK else VisualConfig.GLOW_DECAY)
+                haloAmp     += (target - haloAmp)     * (if (target >= haloAmp)     VisualConfig.HALO_ATTACK else VisualConfig.HALO_DECAY_PREVIEW)
                 delay(16L)
             } else {
-                // Preview detenido: decaer suavemente a negro
                 smoothedAmp += (0f - smoothedAmp) * 0.08f
                 haloAmp     += (0f - haloAmp)     * 0.08f
                 delay(50L)
             }
 
+            val amp    = (smoothedAmp * VisualConfig.SENSITIVITY).coerceIn(0f, 1f)
+            val hamp   = (haloAmp     * VisualConfig.SENSITIVITY).coerceIn(0f, 1f)
             val excess = ((smoothedAmp - VisualConfig.STRETCH_THRESHOLD) /
                          (1f - VisualConfig.STRETCH_THRESHOLD)).coerceIn(0f, 1f)
-            softCanvas.save()
-            if (excess > 0f) {
-                softCanvas.scale(1f, 1f + excess * VisualConfig.STRETCH_FACTOR,
-                    previewBitmap.width * 0.5f, previewBitmap.height * 0.5f)
-            }
-            renderer.drawFrame(softCanvas, haloAmp,
-                VisualConfig.BG_COLOR, VisualConfig.HALO_COLOR, clearBackground = true)
-            renderer.drawFrame(softCanvas, smoothedAmp,
-                VisualConfig.BG_COLOR, VisualConfig.GLOW_COLOR, clearBackground = false)
-            softCanvas.restore()
-            renderTick++
+            glRenderer.drawFrame(amp, hamp, 1f + excess * VisualConfig.STRETCH_FACTOR)
         }
     }
 
@@ -125,14 +104,15 @@ fun PreviewScreen(
                     .border(1.dp, Color(0xFF444444), previewShape)
                     .clip(previewShape)
             ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    @Suppress("UNUSED_EXPRESSION") renderTick
-                    drawImage(
-                        image         = previewImageBitmap,
-                        dstSize       = IntSize(size.width.toInt(), size.height.toInt()),
-                        filterQuality = FilterQuality.High
-                    )
-                }
+                // TextureView recibe el output del GL shader directamente — sin bitmap intermediario
+                AndroidView(
+                    factory = { ctx ->
+                        TextureView(ctx).apply {
+                            surfaceTextureListener = glRenderer
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
                 if (rmsFrames == null && audioUri != null) {
                     val loadingProgress by viewModel.loadingProgress.collectAsState()
                     Column(
@@ -359,34 +339,3 @@ private fun AppButton(
     }
 }
 
-// ── Icono de parlante dibujado con líneas (sin emoji) ────────────────────────
-
-@Composable
-private fun SpeakerIcon(isMuted: Boolean, color: Color) {
-    Canvas(modifier = Modifier.size(14.dp)) {
-        val sw = density * 1.5f
-        val w = size.width; val h = size.height
-
-        // Cuerpo del parlante: barra izquierda + bocina trapezoidal
-        drawLine(color, Offset(0f, h * 0.28f), Offset(0f, h * 0.72f), strokeWidth = sw * 2.2f)
-        drawLine(color, Offset(0f, h * 0.28f), Offset(w * 0.42f, 0f),  strokeWidth = sw)
-        drawLine(color, Offset(0f, h * 0.72f), Offset(w * 0.42f, h),   strokeWidth = sw)
-        drawLine(color, Offset(w * 0.42f, 0f),  Offset(w * 0.42f, h),  strokeWidth = sw)
-
-        if (!isMuted) {
-            // Ondas de sonido: 2 arcos
-            drawArc(color, startAngle = -50f, sweepAngle = 100f, useCenter = false,
-                topLeft = Offset(w * 0.50f, h * 0.18f),
-                size    = GeoSize(w * 0.26f, h * 0.64f),
-                style   = DStroke(width = sw))
-            drawArc(color, startAngle = -62f, sweepAngle = 124f, useCenter = false,
-                topLeft = Offset(w * 0.66f, h * 0.04f),
-                size    = GeoSize(w * 0.32f, h * 0.92f),
-                style   = DStroke(width = sw))
-        } else {
-            // Cruz para silenciado
-            drawLine(color, Offset(w * 0.52f, h * 0.18f), Offset(w * 0.96f, h * 0.82f), strokeWidth = sw)
-            drawLine(color, Offset(w * 0.96f, h * 0.18f), Offset(w * 0.52f, h * 0.82f), strokeWidth = sw)
-        }
-    }
-}
