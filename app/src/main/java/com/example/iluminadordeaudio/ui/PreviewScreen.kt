@@ -60,19 +60,17 @@ fun PreviewScreen(
     var renderTick by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(rmsFrames, isPreviewPlaying) {
-        var audioFrame  = 0
-        var displayTick = 0
         var smoothedAmp = 0f
         var haloAmp     = 0f
         while (isActive) {
             val frames = rmsFrames
             if (isPreviewPlaying && frames != null && frames.isNotEmpty()) {
-                // Animación activa
-                val targetAmp = frames[audioFrame % frames.size]
+                // Sincronizar con la posición real del audio en lugar de contar ticks
+                val posMs     = viewModel.getPreviewPositionMs()
+                val frameIdx  = ((posMs * 30f) / 1000f).toInt().coerceIn(0, frames.size - 1)
+                val targetAmp = frames[frameIdx]
                 smoothedAmp += (targetAmp - smoothedAmp) * (if (targetAmp >= smoothedAmp) 0.35f else 0.07f)
                 haloAmp     += (targetAmp - haloAmp)     * (if (targetAmp >= haloAmp)     0.35f else 0.025f)
-                displayTick++
-                if (displayTick % 2 == 0) audioFrame++
                 delay(16L)
             } else {
                 // Preview detenido: decaer suavemente a negro

@@ -88,6 +88,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun getPreviewPositionMs(): Int = try { previewPlayer?.currentPosition ?: 0 } catch (_: Exception) { 0 }
+
     fun pausePreviewPlayback() {
         try { previewPlayer?.pause() } catch (_: Exception) {}
     }

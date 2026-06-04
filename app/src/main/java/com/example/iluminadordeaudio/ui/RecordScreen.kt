@@ -326,7 +326,7 @@ fun RecordScreen(
                                   state == RecordState.PLAYING ||
                                   state == RecordState.PAUSED_PLAY
         WaveformView(waveform, cursorFraction, waveformInteractive, ::doSeek,
-            Modifier.fillMaxWidth().height(112.dp))
+            Modifier.fillMaxWidth().height(148.dp))
 
         Spacer(Modifier.weight(1f))
 
@@ -360,10 +360,13 @@ fun RecordScreen(
             SmallCircleBtn(enabled = pauseEnabled, onClick = ::doPause) {
                 val barColor = if (pauseEnabled) LAV_SOFT else LAV_SOFT.copy(alpha = 0.3f)
                 Canvas(Modifier.size(22.dp)) {
-                    val bw = size.width * 0.28f; val bh = size.height * 0.74f
-                    val ty = (size.height - bh) / 2f; val gap = size.width * 0.44f
-                    drawRoundRect(barColor, Offset(0f, ty), Size(bw, bh), CornerRadius(bw / 2f))
-                    drawRoundRect(barColor, Offset(gap, ty), Size(bw, bh), CornerRadius(bw / 2f))
+                    val bw      = size.width * 0.26f
+                    val bh      = size.height * 0.74f
+                    val spacing = size.width * 0.18f
+                    val startX  = (size.width - bw * 2f - spacing) / 2f   // centrado
+                    val ty      = (size.height - bh) / 2f
+                    drawRoundRect(barColor, Offset(startX, ty),              Size(bw, bh), CornerRadius(bw / 2f))
+                    drawRoundRect(barColor, Offset(startX + bw + spacing, ty), Size(bw, bh), CornerRadius(bw / 2f))
                 }
             }
         }
@@ -493,7 +496,7 @@ private fun WaveformView(
 
             visible.forEachIndexed { i, amp ->
                 val x     = i * step + step / 2f
-                val h     = (amp * cy * 0.88f).coerceAtLeast(2f)
+                val h     = (amp * cy * 0.96f).coerceAtLeast(2f)
                 // Gradiente de LAV_DIM (antiguo) a LAV_SOFT (reciente) → profundidad temporal
                 val alpha = 0.30f + 0.70f * (i.toFloat() / count)
                 val barColor = androidx.compose.ui.graphics.lerp(LAV_DIM, LAV_SOFT, i.toFloat() / count)
