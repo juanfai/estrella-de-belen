@@ -6,7 +6,6 @@ import android.media.MediaPlayer
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.iluminadordeaudio.audio.AudioAnalyzer
 import com.example.iluminadordeaudio.audio.AudioDecoder
 import com.example.iluminadordeaudio.export.VideoExporter
 import kotlinx.coroutines.Dispatchers
@@ -53,8 +52,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         isPreviewPlaying.value = false
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = AudioDecoder().decodeToPcm(ctx, uri)
-                _rmsFrames.value = AudioAnalyzer().rmsPerFrame(result.pcm, result.sampleRate, 30)
+                val (rms, _) = AudioDecoder().decodeToRms(ctx, uri, 30)
+                _rmsFrames.value = rms
             } catch (e: Exception) {
                 _exportState.value = ExportState(error = "Error al cargar audio: ${e.message}")
             }

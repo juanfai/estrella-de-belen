@@ -9,7 +9,6 @@ import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import com.example.iluminadordeaudio.audio.AudioAnalyzer
 import com.example.iluminadordeaudio.audio.AudioDecoder
 import com.example.iluminadordeaudio.render.GlowRenderer
 import java.io.File
@@ -35,8 +34,7 @@ class VideoExporter(
 ) {
 
     fun export(onProgress: (Float) -> Unit): Uri {
-        val decodeResult = AudioDecoder().decodeToPcm(context, audioUri)
-        val rmsFrames = AudioAnalyzer().rmsPerFrame(decodeResult.pcm, decodeResult.sampleRate, fps)
+        val (rmsFrames, _) = AudioDecoder().decodeToRms(context, audioUri, fps)
         val totalFrames = rmsFrames.size
         val videoDurationUs = totalFrames * 1_000_000L / fps
 
