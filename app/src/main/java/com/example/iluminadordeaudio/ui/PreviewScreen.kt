@@ -12,6 +12,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size as GeoSize
+import androidx.compose.ui.graphics.drawscope.Stroke as DStroke
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,14 +39,16 @@ private val HALO_COLOR = android.graphics.Color.rgb(60, 0, 255)  // violeta elé
 fun PreviewScreen(
     viewModel: MainViewModel,
     onPickAudio: () -> Unit,
+    onRecord: () -> Unit,
     onExport: () -> Unit
 ) {
     val context     = LocalContext.current
-    val audioUri    by viewModel.audioUri.collectAsState()
-    val audioName   by viewModel.audioName.collectAsState()
-    val rmsFrames   by viewModel.rmsFrames.collectAsState()
-    val exportState by viewModel.exportState.collectAsState()
-    val outputName  by viewModel.outputName.collectAsState()
+    val audioUri         by viewModel.audioUri.collectAsState()
+    val audioName        by viewModel.audioName.collectAsState()
+    val rmsFrames        by viewModel.rmsFrames.collectAsState()
+    val exportState      by viewModel.exportState.collectAsState()
+    val outputName       by viewModel.outputName.collectAsState()
+    val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
 
     var showExportDialog by remember { mutableStateOf(false) }
 
@@ -52,45 +59,40 @@ fun PreviewScreen(
     val renderer           = remember { GlowRenderer() }
     var renderTick by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(rmsFrames) {
+    LaunchedEffect(rmsFrames, isPreviewPlaying) {
         var audioFrame  = 0
         var displayTick = 0
         var smoothedAmp = 0f
         var haloAmp     = 0f
         while (isActive) {
             val frames = rmsFrames
-            val targetAmp = if (frames != null && frames.isNotEmpty())
-                frames[audioFrame % frames.size] else 0f
+            if (isPreviewPlaying && frames != null && frames.isNotEmpty()) {
+                // Animación activa
+                val targetAmp = frames[audioFrame % frames.size]
+                smoothedAmp += (targetAmp - smoothedAmp) * (if (targetAmp >= smoothedAmp) 0.35f else 0.07f)
+                haloAmp     += (targetAmp - haloAmp)     * (if (targetAmp >= haloAmp)     0.35f else 0.025f)
+                displayTick++
+                if (displayTick % 2 == 0) audioFrame++
+                delay(16L)
+            } else {
+                // Preview detenido: decaer suavemente a negro
+                smoothedAmp += (0f - smoothedAmp) * 0.08f
+                haloAmp     += (0f - haloAmp)     * 0.08f
+                delay(50L)
+            }
 
-            // Glow blanco: ataque rápido, decaimiento normal
-            val wFactor = if (targetAmp >= smoothedAmp) 0.35f else 0.07f
-            smoothedAmp += (targetAmp - smoothedAmp) * wFactor
-
-            // Halo violeta: mismo ataque, decaimiento mucho más lento (3× más lento)
-            val hFactor = if (targetAmp >= haloAmp) 0.35f else 0.025f
-            haloAmp += (targetAmp - haloAmp) * hFactor
-
-            // Stretch vertical en picos fuertes (basado en el glow blanco)
             val excess = ((smoothedAmp - 0.58f) / (1f - 0.58f)).coerceIn(0f, 1f)
             softCanvas.save()
             if (excess > 0f) {
-                softCanvas.scale(
-                    1f, 1f + excess * 0.77f,
-                    previewBitmap.width * 0.5f, previewBitmap.height * 0.5f
-                )
+                softCanvas.scale(1f, 1f + excess * 0.77f,
+                    previewBitmap.width * 0.5f, previewBitmap.height * 0.5f)
             }
-            // 1.ª pasada: halo violeta (limpia el fondo)
             renderer.drawFrame(softCanvas, haloAmp,
                 android.graphics.Color.BLACK, HALO_COLOR, clearBackground = true)
-            // 2.ª pasada: glow blanco encima (sin limpiar)
             renderer.drawFrame(softCanvas, smoothedAmp,
                 android.graphics.Color.BLACK, android.graphics.Color.WHITE, clearBackground = false)
             softCanvas.restore()
-
             renderTick++
-            displayTick++
-            if (displayTick % 2 == 0 && frames != null && frames.isNotEmpty()) audioFrame++
-            delay(16L)
         }
     }
 
@@ -131,6 +133,7 @@ fun PreviewScreen(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
+
             }
         }
 
@@ -152,8 +155,23 @@ fun PreviewScreen(
                 modifier  = Modifier.fillMaxWidth()
             )
 
-            Button(onClick = onPickAudio, modifier = Modifier.fillMaxWidth()) {
-                Text(if (audioUri == null) "Importar audio" else "Cambiar audio")
+            // Botón de preview: siempre "PREVIEW", relleno lavanda cuando reproduce
+            if (audioUri != null) {
+                AppButton(
+                    onClick  = { viewModel.togglePreviewPlay() },
+                    modifier = Modifier.fillMaxWidth(),
+                    filled   = isPreviewPlaying
+                ) { Text("PREVIEW") }
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                AppButton(onClick = onRecord,    modifier = Modifier.weight(1f)) { Text("GRABAR") }
+                AppButton(onClick = onPickAudio, modifier = Modifier.weight(1f)) {
+                    Text(if (audioUri == null) "IMPORTAR" else "CAMBIAR")
+                }
             }
 
             if (exportState.isExporting) {
@@ -166,11 +184,11 @@ fun PreviewScreen(
                     color = Color.White, fontSize = 13.sp
                 )
             } else {
-                Button(
+                AppButton(
                     onClick  = { showExportDialog = true },
                     modifier = Modifier.fillMaxWidth(),
                     enabled  = audioUri != null && rmsFrames != null
-                ) { Text("Exportar video") }
+                ) { Text("EXPORTAR VIDEO") }
             }
 
             // Resultado — toca para abrir el video
@@ -249,13 +267,88 @@ private fun ExportNameDialog(
             )
         },
         confirmButton = {
-            Button(
-                onClick  = { onConfirm(name) },
-                enabled  = name.isNotBlank()
-            ) { Text("Exportar") }
+            AppButton(onClick = { onConfirm(name) }, enabled = name.isNotBlank()) {
+                Text("EXPORTAR")
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
     )
+}
+
+// ── Estilo unificado de botón: borde lavanda, fondo negro, texto en lavanda ─────
+
+// Dos tonos: DEEP para fondos/bordes activos, SOFT para texto/símbolos
+private val LAV_DEEP = Color(0xFF7733BB)  // profunda → elementos clickeables
+private val LAV_SOFT = Color(0xFFCCADFF)  // suave    → texto, etiquetas
+
+@Composable
+private fun AppButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    filled: Boolean = false,   // PREVIEW activo → fondo DEEP, texto negro
+    content: @Composable RowScope.() -> Unit
+) {
+    if (filled) {
+        // Estado activo: fondo LAV_DEEP, texto negro
+        Button(
+            onClick = onClick, modifier = modifier, enabled = enabled,
+            colors  = ButtonDefaults.buttonColors(
+                containerColor         = LAV_DEEP,
+                contentColor           = Color.Black,
+                disabledContainerColor = LAV_DEEP.copy(alpha = 0.35f),
+                disabledContentColor   = Color.Black.copy(alpha = 0.5f)
+            ),
+            content = content
+        )
+    } else {
+        // Estado normal: borde LAV_DEEP, texto LAV_SOFT, fondo negro
+        OutlinedButton(
+            onClick  = onClick,
+            modifier = modifier,
+            enabled  = enabled,
+            border   = BorderStroke(1.5.dp, if (enabled) LAV_DEEP else LAV_DEEP.copy(0.35f)),
+            colors   = ButtonDefaults.outlinedButtonColors(
+                containerColor         = Color.Black,
+                contentColor           = if (enabled) LAV_SOFT else LAV_SOFT.copy(0.35f),
+                disabledContainerColor = Color.Black,
+                disabledContentColor   = LAV_SOFT.copy(alpha = 0.35f)
+            ),
+            content  = content
+        )
+    }
+}
+
+// ── Icono de parlante dibujado con líneas (sin emoji) ────────────────────────
+
+@Composable
+private fun SpeakerIcon(isMuted: Boolean, color: Color) {
+    Canvas(modifier = Modifier.size(14.dp)) {
+        val sw = density * 1.5f
+        val w = size.width; val h = size.height
+
+        // Cuerpo del parlante: barra izquierda + bocina trapezoidal
+        drawLine(color, Offset(0f, h * 0.28f), Offset(0f, h * 0.72f), strokeWidth = sw * 2.2f)
+        drawLine(color, Offset(0f, h * 0.28f), Offset(w * 0.42f, 0f),  strokeWidth = sw)
+        drawLine(color, Offset(0f, h * 0.72f), Offset(w * 0.42f, h),   strokeWidth = sw)
+        drawLine(color, Offset(w * 0.42f, 0f),  Offset(w * 0.42f, h),  strokeWidth = sw)
+
+        if (!isMuted) {
+            // Ondas de sonido: 2 arcos
+            drawArc(color, startAngle = -50f, sweepAngle = 100f, useCenter = false,
+                topLeft = Offset(w * 0.50f, h * 0.18f),
+                size    = GeoSize(w * 0.26f, h * 0.64f),
+                style   = DStroke(width = sw))
+            drawArc(color, startAngle = -62f, sweepAngle = 124f, useCenter = false,
+                topLeft = Offset(w * 0.66f, h * 0.04f),
+                size    = GeoSize(w * 0.32f, h * 0.92f),
+                style   = DStroke(width = sw))
+        } else {
+            // Cruz para silenciado
+            drawLine(color, Offset(w * 0.52f, h * 0.18f), Offset(w * 0.96f, h * 0.82f), strokeWidth = sw)
+            drawLine(color, Offset(w * 0.96f, h * 0.18f), Offset(w * 0.52f, h * 0.82f), strokeWidth = sw)
+        }
+    }
 }

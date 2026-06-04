@@ -5,6 +5,7 @@
     <!-- Audio import via SAF (GetContent) no requiere permisos. -->
     <!-- READ_MEDIA_AUDIO sólo si hacemos acceso directo al almacenamiento en el futuro -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />

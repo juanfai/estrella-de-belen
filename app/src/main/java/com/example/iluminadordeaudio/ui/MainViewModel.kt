@@ -2,6 +2,7 @@ package com.example.iluminadordeaudio.ui
 
 import android.app.Application
 import android.graphics.Color
+import android.media.MediaPlayer
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class ExportState(
     val isExporting: Boolean = false,
@@ -39,10 +41,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _audioName = MutableStateFlow<String?>(null)
     val audioName: StateFlow<String?> = _audioName.asStateFlow()
 
+    val isPreviewPlaying = MutableStateFlow(false)
+
+    private var previewPlayer: MediaPlayer? = null
+
     fun loadAudio(uri: Uri, displayName: String?) {
         _audioUri.value = uri
         _audioName.value = displayName
         _rmsFrames.value = null
+        previewPlayer?.release(); previewPlayer = null
+        isPreviewPlaying.value = false
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val result = AudioDecoder().decodeToPcm(ctx, uri)
@@ -50,6 +58,43 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) {
                 _exportState.value = ExportState(error = "Error al cargar audio: ${e.message}")
             }
+        }
+    }
+
+    fun togglePreviewPlay() {
+        val uri = _audioUri.value ?: return
+        if (isPreviewPlaying.value) {
+            previewPlayer?.pause()
+            isPreviewPlaying.value = false
+        } else {
+            viewModelScope.launch {
+                try {
+                    if (previewPlayer == null) {
+                        previewPlayer = withContext(Dispatchers.IO) {
+                            MediaPlayer().apply {
+                                setDataSource(ctx, uri)
+                                isLooping = true
+                                prepare()
+                            }
+                        }
+                    }
+                    previewPlayer?.seekTo(0)   // siempre desde el principio
+                    previewPlayer?.start()
+                    isPreviewPlaying.value = true
+                } catch (_: Exception) {
+                    isPreviewPlaying.value = false
+                }
+            }
+        }
+    }
+
+    fun pausePreviewPlayback() {
+        try { previewPlayer?.pause() } catch (_: Exception) {}
+    }
+
+    fun resumePreviewPlayback() {
+        if (isPreviewPlaying.value) {
+            try { previewPlayer?.start() } catch (_: Exception) {}
         }
     }
 
@@ -76,5 +121,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearExportState() {
         _exportState.value = ExportState()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        previewPlayer?.release()
+        previewPlayer = null
     }
 }
