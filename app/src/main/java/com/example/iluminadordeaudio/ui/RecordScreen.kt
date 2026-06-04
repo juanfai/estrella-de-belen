@@ -121,12 +121,36 @@ fun RecordScreen(
                 recordedFile = audioRecorder.start(); recorderStopped = false
                 cursorFraction = 1f; state = RecordState.RECORDING
             }
+            RecordState.RECORDING -> {
+                // STOP: detiene la grabación y lleva el cursor al principio para revisar
+                audioRecorder.stop(); recorderStopped = true
+                cursorFraction = 0f
+                state = RecordState.PAUSED_REC
+            }
             RecordState.PAUSED_REC -> {
                 if (cursorFraction >= 0.99f) {
-                    audioRecorder.resume(); state = RecordState.RECORDING
+                    if (!recorderStopped) {
+                        // Recorder en pausa → reanudar normalmente
+                        audioRecorder.resume(); state = RecordState.RECORDING
+                    } else {
+                        // Recorder detenido (fue STOP'd) → continuar grabando al final del audio actual
+                        val f = recordedFile ?: return; val prevBase = baseFile
+                        isTrimming = true
+                        scope.launch {
+                            val newBase = if (prevBase != null) {
+                                val m = File(context.cacheDir, "base_${System.currentTimeMillis()}.m4a")
+                                withContext(Dispatchers.IO) { AudioEditor.concatenate(prevBase, f, m) }
+                                prevBase.delete(); f.delete(); m
+                            } else f
+                            baseFile = newBase
+                            elapsedSec = 0; cursorFraction = 1f
+                            recordedFile = audioRecorder.start(); recorderStopped = false
+                            isTrimming = false; state = RecordState.RECORDING
+                        }
+                    }
                 } else {
-                    // Cursor movido → detener, recortar, grabar desde ahí
-                    audioRecorder.stop(); recorderStopped = true
+                    // Cursor movido → detener (si no lo está), recortar, grabar desde ahí
+                    if (!recorderStopped) { audioRecorder.stop(); recorderStopped = true }
                     val f = recordedFile ?: return
                     val fraction = cursorFraction; val prevBase = baseFile
                     isTrimming = true
@@ -322,6 +346,7 @@ fun RecordScreen(
                     blink       = recBlink,
                     isRecording = state == RecordState.RECORDING,
                     enabled     = !isTrimming && (state == RecordState.IDLE ||
+                                  state == RecordState.RECORDING ||   // toca = STOP
                                   state == RecordState.PAUSED_REC ||
                                   state == RecordState.PAUSED_PLAY),
                     onClick     = ::doRecord
@@ -361,21 +386,39 @@ fun RecordScreen(
 
 @Composable
 private fun RecordBtn(blink: Boolean, isRecording: Boolean, enabled: Boolean, onClick: () -> Unit) {
-    val animProg by animateFloatAsState(
+    // Animación de color: rojo ↔ rosa durante grabación
+    val blinkProg by animateFloatAsState(
         targetValue = if (blink) 1f else 0f, animationSpec = tween(180), label = "blink")
+    // Animación de forma: círculo → cuadrado redondeado durante grabación
+    val shapeProg by animateFloatAsState(
+        targetValue = if (isRecording) 1f else 0f, animationSpec = tween(280), label = "shape")
+
     val fillColor = when {
-        isRecording -> androidx.compose.ui.graphics.lerp(Color.Red, Color(0xFFFF88BB), animProg)
+        isRecording -> androidx.compose.ui.graphics.lerp(Color.Red, Color(0xFFFF88BB), blinkProg)
         enabled     -> Color.Red
         else        -> Color(0xFF882233)
     }
-    val borderAlpha = if (isRecording || enabled) 1f else 0.45f
-    // LAV_DEEP como borde → contrasta con el rojo del interior
-    Box(modifier = Modifier.size(80.dp)
-            .background(LAV_DEEP.copy(alpha = borderAlpha), CircleShape),
-        contentAlignment = Alignment.Center) {
-        Box(modifier = Modifier.size(72.dp)
-                .background(fillColor, CircleShape)
-                .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier))
+    val borderAlpha = if (enabled) 1f else 0.45f
+
+    Box(
+        modifier = Modifier
+            .size(80.dp)
+            .background(LAV_DEEP.copy(alpha = borderAlpha), CircleShape)
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.size(72.dp)) {
+            val full = size.minDimension
+            // Interpolar de círculo (full, radio = full/2) a cuadrado redondeado (38% del full)
+            val side   = full   - (full   - full * 0.38f) * shapeProg
+            val corner = full/2 - (full/2 - side * 0.20f) * shapeProg
+            drawRoundRect(
+                color        = fillColor,
+                topLeft      = Offset((full - side) / 2f, (full - side) / 2f),
+                size         = Size(side, side),
+                cornerRadius = CornerRadius(corner, corner)
+            )
+        }
     }
 }
 
