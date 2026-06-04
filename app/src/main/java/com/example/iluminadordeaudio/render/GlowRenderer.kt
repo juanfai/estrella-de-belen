@@ -1,6 +1,7 @@
 package com.example.iluminadordeaudio.render
 
 import android.graphics.BlurMaskFilter
+import com.example.iluminadordeaudio.render.VisualConfig
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -26,8 +27,7 @@ class GlowRenderer {
     ) {
         if (clearBackground) canvas.drawColor(bgColor)
 
-        // Sensibilidad +80 % antes de clampear
-        val norm = (amplitude * 1.8f).coerceIn(0f, 1f)
+        val norm = (amplitude * VisualConfig.SENSITIVITY).coerceIn(0f, 1f)
         if (norm == 0f) return
 
         val w   = canvas.width.toFloat()

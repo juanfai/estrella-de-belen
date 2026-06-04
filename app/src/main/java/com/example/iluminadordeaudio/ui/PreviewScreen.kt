@@ -30,10 +30,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.iluminadordeaudio.render.GlowRenderer
+import com.example.iluminadordeaudio.render.VisualConfig
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-
-private val HALO_COLOR = android.graphics.Color.rgb(60, 0, 255)  // violeta eléctrico
 
 @Composable
 fun PreviewScreen(
@@ -51,6 +50,10 @@ fun PreviewScreen(
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
 
     var showExportDialog by remember { mutableStateOf(false) }
+    var exportStartMs    by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(exportState.isExporting) {
+        exportStartMs = if (exportState.isExporting) System.currentTimeMillis() else 0L
+    }
 
     // Bitmap 9:16 para la preview — 405×720 da buena base sin penalizar el blur en CPU
     val previewBitmap      = remember { Bitmap.createBitmap(405, 720, Bitmap.Config.ARGB_8888) }
@@ -69,8 +72,8 @@ fun PreviewScreen(
                 val posMs     = viewModel.getPreviewPositionMs()
                 val frameIdx  = ((posMs * 30f) / 1000f).toInt().coerceIn(0, frames.size - 1)
                 val targetAmp = frames[frameIdx]
-                smoothedAmp += (targetAmp - smoothedAmp) * (if (targetAmp >= smoothedAmp) 0.35f else 0.07f)
-                haloAmp     += (targetAmp - haloAmp)     * (if (targetAmp >= haloAmp)     0.35f else 0.025f)
+                smoothedAmp += (targetAmp - smoothedAmp) * (if (targetAmp >= smoothedAmp) VisualConfig.GLOW_ATTACK else VisualConfig.GLOW_DECAY)
+                haloAmp     += (targetAmp - haloAmp)     * (if (targetAmp >= haloAmp)     VisualConfig.HALO_ATTACK else VisualConfig.HALO_DECAY_PREVIEW)
                 delay(16L)
             } else {
                 // Preview detenido: decaer suavemente a negro
@@ -79,16 +82,17 @@ fun PreviewScreen(
                 delay(50L)
             }
 
-            val excess = ((smoothedAmp - 0.44f) / (1f - 0.44f)).coerceIn(0f, 1f)
+            val excess = ((smoothedAmp - VisualConfig.STRETCH_THRESHOLD) /
+                         (1f - VisualConfig.STRETCH_THRESHOLD)).coerceIn(0f, 1f)
             softCanvas.save()
             if (excess > 0f) {
-                softCanvas.scale(1f, 1f + excess * 0.77f,
+                softCanvas.scale(1f, 1f + excess * VisualConfig.STRETCH_FACTOR,
                     previewBitmap.width * 0.5f, previewBitmap.height * 0.5f)
             }
             renderer.drawFrame(softCanvas, haloAmp,
-                android.graphics.Color.BLACK, HALO_COLOR, clearBackground = true)
+                VisualConfig.BG_COLOR, VisualConfig.HALO_COLOR, clearBackground = true)
             renderer.drawFrame(softCanvas, smoothedAmp,
-                android.graphics.Color.BLACK, android.graphics.Color.WHITE, clearBackground = false)
+                VisualConfig.BG_COLOR, VisualConfig.GLOW_COLOR, clearBackground = false)
             softCanvas.restore()
             renderTick++
         }
@@ -164,14 +168,14 @@ fun PreviewScreen(
                 modifier  = Modifier.fillMaxWidth()
             )
 
-            // Botón de preview: siempre "PREVIEW", relleno lavanda cuando reproduce
-            if (audioUri != null) {
-                AppButton(
-                    onClick  = { viewModel.togglePreviewPlay() },
-                    modifier = Modifier.fillMaxWidth(),
-                    filled   = isPreviewPlaying
-                ) { Text("PREVIEW") }
-            }
+            // Botón de preview: siempre visible, sólo activo cuando hay audio listo
+            val previewEnabled = audioUri != null && rmsFrames != null && !exportState.isExporting
+            AppButton(
+                onClick  = { viewModel.togglePreviewPlay() },
+                modifier = Modifier.fillMaxWidth(),
+                enabled  = previewEnabled,
+                filled   = isPreviewPlaying && previewEnabled
+            ) { Text("PREVIEW") }
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -179,7 +183,7 @@ fun PreviewScreen(
             ) {
                 AppButton(onClick = onRecord,    modifier = Modifier.weight(1f)) { Text("GRABAR") }
                 AppButton(onClick = onPickAudio, modifier = Modifier.weight(1f)) {
-                    Text(if (audioUri == null) "IMPORTAR" else "CAMBIAR")
+                    Text("IMPORTAR")
                 }
             }
 
@@ -188,10 +192,18 @@ fun PreviewScreen(
                     progress = { exportState.progress },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text(
-                    "Exportando… ${(exportState.progress * 100).toInt()}%",
-                    color = Color.White, fontSize = 13.sp
-                )
+                val pct = (exportState.progress * 100).toInt()
+                val etaText = if (exportState.progress > 0.03f && exportStartMs > 0L) {
+                    val elapsedMs   = System.currentTimeMillis() - exportStartMs
+                    val remainingMs = (elapsedMs / exportState.progress * (1f - exportState.progress)).toLong()
+                    val sec = (remainingMs / 1000).toInt().coerceAtLeast(0)
+                    if (sec < 60) "~${sec}s" else "~${sec / 60}m ${sec % 60}s"
+                } else "..."
+                Row(modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Exportando… $pct %", color = Color.White, fontSize = 13.sp)
+                    Text(etaText, color = Color(0xFFCCADFF), fontSize = 13.sp)
+                }
             } else {
                 AppButton(
                     onClick  = {

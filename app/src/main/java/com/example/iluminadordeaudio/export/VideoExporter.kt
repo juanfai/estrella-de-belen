@@ -9,11 +9,12 @@ import android.media.MediaMuxer
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import android.graphics.Bitmap
-import android.graphics.Paint as GPaint
-import android.graphics.Rect as GRect
+import android.opengl.EGL14
 import com.example.iluminadordeaudio.audio.AudioDecoder
-import com.example.iluminadordeaudio.render.GlowRenderer
+import com.example.iluminadordeaudio.render.EglCore
+import com.example.iluminadordeaudio.render.GlowShaderRenderer
+import com.example.iluminadordeaudio.render.VisualConfig
+import com.example.iluminadordeaudio.render.VisualConfig.toGlRgb
 import java.io.File
 import java.nio.ByteBuffer
 
@@ -73,52 +74,45 @@ class VideoExporter(
     private fun encodeVideo(rmsFrames: FloatArray, outputFile: File, onFrame: (Int) -> Unit) {
         val encoder = VideoEncoder(width, height, fps, outputFile)
 
-        // ── A+B: caché de 100 frames pre-renderizados en resolución reducida (width/4 × height/4) ──
-        // Renderizar a 270×480 en CPU (BlurMaskFilter funciona) y escalar 4× al copiar al encoder.
-        // 100 bitmaps × 270×480×4 bytes ≈ 52 MB. Speedup esperado: 15-20× vs render por frame.
-        val LEVELS = 100
-        val cW = width / 4;  val cH = height / 4
-        val haloColor = android.graphics.Color.rgb(160, 0, 255)
-        val cRenderer = GlowRenderer()
-        val bitmaps   = Array(LEVELS) { Bitmap.createBitmap(cW, cH, Bitmap.Config.ARGB_8888) }
-        val canvases  = Array(LEVELS) { android.graphics.Canvas(bitmaps[it]) }
+        // ── OpenGL ES: renderizado con shaders GLSL en GPU ────────────────────
+        val egl = EglCore()
+        val eglSurface = egl.createWindowSurface(encoder.inputSurface)
+        egl.makeCurrent(eglSurface)
 
-        for (lvl in 0 until LEVELS) {
-            val amp = lvl.toFloat() / (LEVELS - 1).coerceAtLeast(1)
-            cRenderer.drawFrame(canvases[lvl], amp, bgColor, haloColor, clearBackground = true)
-            cRenderer.drawFrame(canvases[lvl], amp, bgColor, glowColor, clearBackground = false)
-        }
+        val renderer = GlowShaderRenderer(width, height)
 
-        val copyPaint = GPaint().apply { isFilterBitmap = true }  // bilinear al escalar 4×
-        val dstRect   = GRect(0, 0, width, height)
+        val haloRgb = VisualConfig.HALO_COLOR.toGlRgb()
+        val glowRgb = VisualConfig.GLOW_COLOR.toGlRgb()
+        val bgRgb   = VisualConfig.BG_COLOR.toGlRgb()
 
-        // ── Encode: por cada frame buscar el nivel más cercano y copiar escalado ──
         var smoothedAmp = 0f
         var haloAmp     = 0f
+
         rmsFrames.forEachIndexed { i, targetAmp ->
-            val wFactor = if (targetAmp >= smoothedAmp) 0.35f else 0.07f
+            val wFactor = if (targetAmp >= smoothedAmp) VisualConfig.GLOW_ATTACK else VisualConfig.GLOW_DECAY
             smoothedAmp += (targetAmp - smoothedAmp) * wFactor
-            val hFactor = if (targetAmp >= haloAmp) 0.35f else 0.040f
+            val hFactor = if (targetAmp >= haloAmp) VisualConfig.HALO_ATTACK else VisualConfig.HALO_DECAY_EXPORT
             haloAmp += (targetAmp - haloAmp) * hFactor
 
-            val lvl = (smoothedAmp * (LEVELS - 1)).toInt().coerceIn(0, LEVELS - 1)
+            val amp   = (smoothedAmp * VisualConfig.SENSITIVITY).coerceIn(0f, 1f)
+            val hamp  = (haloAmp     * VisualConfig.SENSITIVITY).coerceIn(0f, 1f)
+            val excess = ((smoothedAmp - VisualConfig.STRETCH_THRESHOLD) /
+                         (1f - VisualConfig.STRETCH_THRESHOLD)).coerceIn(0f, 1f)
+            val stretch = 1f + excess * VisualConfig.STRETCH_FACTOR
 
-            val canvas = encoder.inputSurface.lockCanvas(null)
-            val excess = ((smoothedAmp - 0.44f) / (1f - 0.44f)).coerceIn(0f, 1f)
-            canvas.save()
-            if (excess > 0f) {
-                canvas.scale(1f, 1f + excess * 0.77f, width / 2f, height / 2f)
-            }
-            // Copiar bitmap cacheado escalado de cW×cH a width×height con filtro bilinear
-            canvas.drawBitmap(bitmaps[lvl], null, dstRect, copyPaint)
-            canvas.restore()
+            renderer.render(amp, hamp, glowRgb, haloRgb, bgRgb, stretch)
 
-            encoder.inputSurface.unlockCanvasAndPost(canvas)
+            // Timestamp exacto por frame → audio/video en perfecto sync
+            egl.setPresentationTime(eglSurface, i.toLong() * 1_000_000_000L / fps)
+            egl.swapBuffers(eglSurface)
+
             encoder.drainEncoder(false)
             onFrame(i)
         }
 
-        bitmaps.forEach { it.recycle() }
+        renderer.release()
+        egl.destroySurface(eglSurface)
+        egl.release()
 
         encoder.drainEncoder(true)
         encoder.release()

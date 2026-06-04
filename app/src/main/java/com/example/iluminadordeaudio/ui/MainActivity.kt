@@ -49,6 +49,9 @@ class MainActivity : ComponentActivity() {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
+    override fun onPause()  { super.onPause();  viewModel.pausePreviewPlayback() }
+    override fun onResume() { super.onResume(); viewModel.resumePreviewPlayback() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
