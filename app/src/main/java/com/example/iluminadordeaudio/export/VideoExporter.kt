@@ -30,24 +30,37 @@ class VideoExporter(
     private val fps: Int = 30,
     private val width: Int = 1080,
     private val height: Int = 1920,
-    private val outputName: String = "AudioVisual"
+    private val outputName: String = "AudioVisual",
+    /** RMS ya calculados (desde el import). Si se pasan, se evita re-decodificar el audio. */
+    private val precomputedRms: FloatArray? = null
 ) {
 
     fun export(onProgress: (Float) -> Unit): Uri {
-        val (rmsFrames, _) = AudioDecoder().decodeToRms(context, audioUri, fps)
+        // Si tenemos los RMS precalculados los usamos directamente.
+        // Si no, los calculamos aquí reportando progreso (0→20 %).
+        val rmsFrames = if (precomputedRms != null && precomputedRms.isNotEmpty()) {
+            onProgress(0.02f)   // pequeño tick inicial para mostrar que arrancó
+            precomputedRms
+        } else {
+            AudioDecoder().decodeToRms(context, audioUri, fps) { p ->
+                onProgress(p * 0.20f)
+            }.first
+        }
         val totalFrames = rmsFrames.size
         val videoDurationUs = totalFrames * 1_000_000L / fps
 
         // Paso 1: codificar video a archivo temporal
+        val encodeStart = if (precomputedRms != null && precomputedRms.isNotEmpty()) 0.02f else 0.20f
+        val encodeEnd   = if (precomputedRms != null && precomputedRms.isNotEmpty()) 0.72f else 0.90f
         val videoTemp = File(context.cacheDir, "video_temp_${System.currentTimeMillis()}.mp4")
         encodeVideo(rmsFrames, videoTemp) { frame ->
-            onProgress(frame.toFloat() / totalFrames * 0.7f)
+            onProgress(encodeStart + (frame.toFloat() / totalFrames) * (encodeEnd - encodeStart))
         }
 
         // Paso 2: remuxear video + audio
         val outputFile = File(context.cacheDir, "output_${System.currentTimeMillis()}.mp4")
         remuxVideoAndAudio(videoTemp, videoDurationUs, outputFile) { audioProgress ->
-            onProgress(0.7f + audioProgress * 0.3f)
+            onProgress(encodeEnd + audioProgress * (1f - encodeEnd))
         }
 
         videoTemp.delete()

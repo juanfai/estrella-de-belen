@@ -40,7 +40,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _audioName = MutableStateFlow<String?>(null)
     val audioName: StateFlow<String?> = _audioName.asStateFlow()
 
-    val isPreviewPlaying = MutableStateFlow(false)
+    val isPreviewPlaying  = MutableStateFlow(false)
+    val loadingProgress   = MutableStateFlow(0f)
 
     private var previewPlayer: MediaPlayer? = null
 
@@ -50,9 +51,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _rmsFrames.value = null
         previewPlayer?.release(); previewPlayer = null
         isPreviewPlaying.value = false
+        loadingProgress.value  = 0f
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val (rms, _) = AudioDecoder().decodeToRms(ctx, uri, 30)
+                val (rms, _) = AudioDecoder().decodeToRms(ctx, uri, 30) { p ->
+                    loadingProgress.value = p
+                }
+                loadingProgress.value = 1f
                 _rmsFrames.value = rms
             } catch (e: Exception) {
                 _exportState.value = ExportState(error = "Error al cargar audio: ${e.message}")
@@ -107,9 +112,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val resultUri = VideoExporter(
-                    context    = ctx,
-                    audioUri   = uri,
-                    outputName = outputName.value
+                    context        = ctx,
+                    audioUri       = uri,
+                    outputName     = outputName.value,
+                    precomputedRms = _rmsFrames.value   // evita re-decodificar el audio
                 ).export { progress ->
                     _exportState.value = _exportState.value.copy(progress = progress)
                 }

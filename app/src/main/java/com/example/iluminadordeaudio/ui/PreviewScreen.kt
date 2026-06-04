@@ -126,10 +126,21 @@ fun PreviewScreen(
                     )
                 }
                 if (rmsFrames == null && audioUri != null) {
-                    CircularProgressIndicator(
-                        color    = Color.White,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    val loadingProgress by viewModel.loadingProgress.collectAsState()
+                    Column(
+                        modifier            = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF7733BB))
+                        if (loadingProgress > 0f) {
+                            Text(
+                                text     = "${(loadingProgress * 100).toInt()} %",
+                                color    = Color(0xFFCCADFF),   // lavanda claro
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
                 }
 
             }

@@ -16,7 +16,10 @@ class AudioDecoder {
      *
      * @return Par (rmsFrames normalizado [0..1], sampleRate)
      */
-    fun decodeToRms(context: Context, uri: Uri, fps: Int): Pair<FloatArray, Int> {
+    fun decodeToRms(
+        context: Context, uri: Uri, fps: Int,
+        onProgress: ((Float) -> Unit)? = null
+    ): Pair<FloatArray, Int> {
         val extractor = MediaExtractor()
         extractor.setDataSource(context, uri, null)
 
@@ -33,6 +36,10 @@ class AudioDecoder {
         val codec = MediaCodec.createDecoderByType(mime)
         codec.configure(format, null, null, 0)
         codec.start()
+
+        // Duración total para reportar progreso (puede no estar disponible en todos los formatos)
+        val totalUs = if (format.containsKey(MediaFormat.KEY_DURATION))
+            format.getLong(MediaFormat.KEY_DURATION) else 0L
 
         val samplesPerFrame = sampleRate / fps
         val rmsAccum        = ArrayList<Float>()
@@ -53,6 +60,9 @@ class AudioDecoder {
                         codec.queueInputBuffer(idx, 0, 0, 0L, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                         inputEOS = true
                     } else {
+                        if (totalUs > 0 && onProgress != null) {
+                            onProgress((extractor.sampleTime.toFloat() / totalUs).coerceIn(0f, 1f))
+                        }
                         codec.queueInputBuffer(idx, 0, size, extractor.sampleTime, 0)
                         extractor.advance()
                     }
