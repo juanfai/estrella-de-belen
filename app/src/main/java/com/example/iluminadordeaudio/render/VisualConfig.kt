@@ -11,7 +11,7 @@ object VisualConfig {
     // ── Colores (notación hexadecimal web #RRGGBB) ────────────────────────────
 
     /** Destello central (glow) */
-    val GLOW_COLOR  = hex("#FFFFFF")   // blanco
+    val GLOW_COLOR  = hex("#d9abff")   // blanco
 
     /** Halo exterior — persiste después del pico de volumen */
     val HALO_COLOR  = hex("#5e1fff")   // azul-violeta
@@ -24,6 +24,10 @@ object VisualConfig {
     /** Multiplicador de amplitud antes de renderizar.
      *  Más alto = efecto más reactivo al volumen. */
     const val SENSITIVITY = 1.8f
+
+    /** Intensidad del destello blanco (0.0 = invisible, 1.0 = máximo).
+     *  No afecta al halo violeta ni al tamaño de la forma. */
+    const val GLOW_BRIGHTNESS = 0.72f
 
     /** Umbral de amplitud (0-1) a partir del cual la imagen empieza a estirarse. */
     const val STRETCH_THRESHOLD = 0.44f

@@ -1,6 +1,7 @@
 package com.example.iluminadordeaudio.render
 
 import android.opengl.GLES20
+import com.example.iluminadordeaudio.render.VisualConfig
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -18,7 +19,8 @@ class GlowShaderRenderer(private val width: Int, private val height: Int) {
     private val quadBuffer: Int
     private val posAttr: Int
     private val uSize: Int; private val uAmp: Int; private val uHamp: Int
-    private val uGlow: Int; private val uHalo: Int; private val uBg: Int; private val uStretch: Int
+    private val uGlow: Int; private val uHalo: Int; private val uBg: Int
+    private val uStretch: Int; private val uGlowBrightness: Int
 
     init {
         val vs = compileShader(GLES20.GL_VERTEX_SHADER, VERT_SRC)
@@ -30,13 +32,14 @@ class GlowShaderRenderer(private val width: Int, private val height: Int) {
         GLES20.glDeleteShader(vs); GLES20.glDeleteShader(fs)
 
         posAttr  = GLES20.glGetAttribLocation(program,  "a_pos")
-        uSize    = GLES20.glGetUniformLocation(program, "u_size")
-        uAmp     = GLES20.glGetUniformLocation(program, "u_amp")
-        uHamp    = GLES20.glGetUniformLocation(program, "u_hamp")
-        uGlow    = GLES20.glGetUniformLocation(program, "u_glow")
-        uHalo    = GLES20.glGetUniformLocation(program, "u_halo")
-        uBg      = GLES20.glGetUniformLocation(program, "u_bg")
-        uStretch = GLES20.glGetUniformLocation(program, "u_stretch")
+        uSize          = GLES20.glGetUniformLocation(program, "u_size")
+        uAmp           = GLES20.glGetUniformLocation(program, "u_amp")
+        uHamp          = GLES20.glGetUniformLocation(program, "u_hamp")
+        uGlow          = GLES20.glGetUniformLocation(program, "u_glow")
+        uHalo          = GLES20.glGetUniformLocation(program, "u_halo")
+        uBg            = GLES20.glGetUniformLocation(program, "u_bg")
+        uStretch       = GLES20.glGetUniformLocation(program, "u_stretch")
+        uGlowBrightness = GLES20.glGetUniformLocation(program, "u_glow_brightness")
 
         // Full-screen quad (triangle strip): BL, BR, TL, TR
         val verts = floatArrayOf(-1f, -1f,  1f, -1f,  -1f, 1f,  1f, 1f)
@@ -75,6 +78,7 @@ class GlowShaderRenderer(private val width: Int, private val height: Int) {
         GLES20.glUniform3fv(uHalo, 1, haloRgb, 0)
         GLES20.glUniform3fv(uBg,   1, bgRgb,   0)
         GLES20.glUniform1f(uStretch, stretchY)
+        GLES20.glUniform1f(uGlowBrightness, VisualConfig.GLOW_BRIGHTNESS)
 
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, quadBuffer)
         GLES20.glEnableVertexAttribArray(posAttr)
@@ -113,12 +117,13 @@ void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
         private const val FRAG_SRC = """
 precision highp float;
 uniform vec2  u_size;
-uniform float u_amp;     // amplitud blanco [0,1] con 1.8x aplicado
-uniform float u_hamp;    // amplitud violeta [0,1]
+uniform float u_amp;
+uniform float u_hamp;
 uniform vec3  u_glow;
 uniform vec3  u_halo;
 uniform vec3  u_bg;
 uniform float u_stretch;
+uniform float u_glow_brightness;   // intensidad del destello blanco (0-1)
 
 float eg(vec2 p, float sx, float sy) {
     float sx2 = sx * sx + 0.01;
@@ -150,15 +155,16 @@ void main() {
     c += u_halo * (h * 1.00) * eg(p, h * ref * 0.090,  h * ref * 0.084);
     c += u_halo * 1.00        * eg(p, h * ref * 0.027,  h * ref * 0.026);
 
-    // ── Glow blanco ───────────────────────────────────────────────────────────
-    c += u_glow * (a * 0.13) * eg(p, w * 0.50,        a * ref * 0.047);
-    c += u_glow * (a * 0.10) * eg(p, a * ref * 0.546,  a * ref * 0.076);
-    c += u_glow * (a * 0.13) * eg(p, a * ref * 0.409,  a * ref * 0.124);
-    c += u_glow * (a * 0.16) * eg(p, a * ref * 0.288,  a * ref * 0.203);
-    c += u_glow * (a * 0.25) * eg(p, a * ref * 0.205,  a * ref * 0.180);
-    c += u_glow * (a * 0.50) * eg(p, a * ref * 0.122,  a * ref * 0.112);
-    c += u_glow * (a * 0.88) * eg(p, a * ref * 0.060,  a * ref * 0.056);
-    c += u_glow * 0.96        * eg(p, a * ref * 0.018,  a * ref * 0.017);
+    // ── Glow blanco (modulado por u_glow_brightness) ─────────────────────────
+    float gb = u_glow_brightness;
+    c += u_glow * (a * 0.13 * gb) * eg(p, w * 0.50,        a * ref * 0.047);
+    c += u_glow * (a * 0.10 * gb) * eg(p, a * ref * 0.546,  a * ref * 0.076);
+    c += u_glow * (a * 0.13 * gb) * eg(p, a * ref * 0.409,  a * ref * 0.124);
+    c += u_glow * (a * 0.16 * gb) * eg(p, a * ref * 0.288,  a * ref * 0.203);
+    c += u_glow * (a * 0.25 * gb) * eg(p, a * ref * 0.205,  a * ref * 0.180);
+    c += u_glow * (a * 0.50 * gb) * eg(p, a * ref * 0.122,  a * ref * 0.112);
+    c += u_glow * (a * 0.88 * gb) * eg(p, a * ref * 0.060,  a * ref * 0.056);
+    c += u_glow * (0.96    * gb)  * eg(p, a * ref * 0.018,  a * ref * 0.017);
 
     gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
 }
