@@ -130,6 +130,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _exportState.value = ExportState()
     }
 
+    /** Vuelve la app al estado inicial: sin audio cargado, listo para empezar de nuevo. */
+    fun resetToInitial() {
+        previewPlayer?.release(); previewPlayer = null
+        isPreviewPlaying.value  = false
+        _audioUri.value         = null
+        _audioName.value        = null
+        _rmsFrames.value        = null
+        _exportState.value      = ExportState()
+        loadingProgress.value   = 0f
+        outputName.value        = "AudioVisual"
+    }
+
     override fun onCleared() {
         super.onCleared()
         previewPlayer?.release()

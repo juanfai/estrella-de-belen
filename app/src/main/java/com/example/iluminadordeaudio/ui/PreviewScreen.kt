@@ -12,6 +12,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size as GeoSize
 import androidx.compose.ui.graphics.drawscope.Stroke as DStroke
@@ -159,66 +163,75 @@ fun PreviewScreen(
                 .padding(bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text      = audioName ?: "Sin audio seleccionado",
-                color     = Color.Gray,
-                fontSize  = 12.sp,
-                textAlign = TextAlign.Center,
-                maxLines  = 1,
-                modifier  = Modifier.fillMaxWidth()
-            )
-
-            // Botón de preview: siempre visible, sólo activo cuando hay audio listo
-            val previewEnabled = audioUri != null && rmsFrames != null && !exportState.isExporting
-            AppButton(
-                onClick  = { viewModel.togglePreviewPlay() },
-                modifier = Modifier.fillMaxWidth(),
-                enabled  = previewEnabled,
-                filled   = isPreviewPlaying && previewEnabled
-            ) { Text("PREVIEW") }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                AppButton(onClick = onRecord,    modifier = Modifier.weight(1f)) { Text("GRABAR") }
-                AppButton(onClick = onPickAudio, modifier = Modifier.weight(1f)) {
-                    Text("IMPORTAR")
-                }
-            }
-
-            if (exportState.isExporting) {
-                LinearProgressIndicator(
-                    progress = { exportState.progress },
-                    modifier = Modifier.fillMaxWidth()
+            // Botones ocultos una vez que el video está exportado
+            if (exportState.exportedUri == null) {
+                Text(
+                    text      = audioName ?: "Sin audio seleccionado",
+                    color     = Color.Gray,
+                    fontSize  = 12.sp,
+                    textAlign = TextAlign.Center,
+                    maxLines  = 1,
+                    modifier  = Modifier.fillMaxWidth()
                 )
-                val pct = (exportState.progress * 100).toInt()
-                val etaText = if (exportState.progress > 0.03f && exportStartMs > 0L) {
-                    val elapsedMs   = System.currentTimeMillis() - exportStartMs
-                    val remainingMs = (elapsedMs / exportState.progress * (1f - exportState.progress)).toLong()
-                    val sec = (remainingMs / 1000).toInt().coerceAtLeast(0)
-                    if (sec < 60) "~${sec}s" else "~${sec / 60}m ${sec % 60}s"
-                } else "..."
-                Row(modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Exportando… $pct %", color = Color.White, fontSize = 13.sp)
-                    Text(etaText, color = Color(0xFFCCADFF), fontSize = 13.sp)
-                }
-            } else {
+
+                // Botón de preview
+                val previewEnabled = audioUri != null && rmsFrames != null && !exportState.isExporting
                 AppButton(
-                    onClick  = {
-                        if (isPreviewPlaying) viewModel.togglePreviewPlay()
-                        showExportDialog = true
-                    },
+                    onClick  = { viewModel.togglePreviewPlay() },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled  = audioUri != null && rmsFrames != null
-                ) { Text("EXPORTAR VIDEO") }
+                    enabled  = previewEnabled,
+                    filled   = isPreviewPlaying && previewEnabled
+                ) { Text("PREVIEW") }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    AppButton(onClick = onRecord,    modifier = Modifier.weight(1f),
+                        enabled = !exportState.isExporting) { Text("GRABAR") }
+                    AppButton(onClick = onPickAudio, modifier = Modifier.weight(1f),
+                        enabled = !exportState.isExporting) { Text("IMPORTAR") }
+                }
+
+                if (exportState.isExporting) {
+                    LinearProgressIndicator(
+                        progress = { exportState.progress },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    val pct = (exportState.progress * 100).toInt()
+                    val etaText = if (exportState.progress > 0.03f && exportStartMs > 0L) {
+                        val elapsedMs   = System.currentTimeMillis() - exportStartMs
+                        val remainingMs = (elapsedMs / exportState.progress * (1f - exportState.progress)).toLong()
+                        val sec = (remainingMs / 1000).toInt().coerceAtLeast(0)
+                        if (sec < 60) "~${sec}s" else "~${sec / 60}m ${sec % 60}s"
+                    } else "..."
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Exportando… $pct %", color = Color.White, fontSize = 13.sp)
+                        Text(etaText, color = Color(0xFFCCADFF), fontSize = 13.sp)
+                    }
+                } else {
+                    AppButton(
+                        onClick  = {
+                            if (isPreviewPlaying) viewModel.togglePreviewPlay()
+                            showExportDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled  = audioUri != null && rmsFrames != null
+                    ) { Text("EXPORTAR VIDEO") }
+                }
             }
 
             // Resultado — toca para abrir el video
             exportState.exportedUri?.let { uri ->
+                val savedText = buildAnnotatedString {
+                    append("¡Video guardado! Tocá ")
+                    withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) {
+                        append("acá para abrirlo.")
+                    }
+                }
                 Text(
-                    text      = "¡Video guardado! Toca para abrirlo.",
+                    text      = savedText,
                     color     = Color(0xFF66BB6A),
                     fontSize  = 13.sp,
                     textAlign = TextAlign.Center,
@@ -235,10 +248,10 @@ fun PreviewScreen(
                         .padding(vertical = 4.dp)
                 )
                 AppButton(
-                    onClick  = viewModel::clearExportState,
+                    onClick  = viewModel::resetToInitial,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     filled   = true
-                ) { Text("OK") }
+                ) { Text("NUEVO") }
             }
 
             exportState.error?.let { err ->

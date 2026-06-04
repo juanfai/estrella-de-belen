@@ -45,7 +45,7 @@ object VisualConfig {
 
     /** Qué tan rápido baja el halo — más bajo que GLOW_DECAY para el efecto de "persistencia". */
     const val HALO_DECAY_PREVIEW = 0.025f   // a 60 fps
-    const val HALO_DECAY_EXPORT  = 0.040f   // a 30 fps (equivalente aproximado)
+    const val HALO_DECAY_EXPORT  = 0.025f   // a 30 fps (equivalente aproximado)
 
     // ── Utilidades ────────────────────────────────────────────────────────────
 
