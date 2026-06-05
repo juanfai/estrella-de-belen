@@ -8,6 +8,11 @@ import android.net.Uri
 import java.nio.ByteOrder
 import kotlin.math.sqrt
 
+// Procesar 1 de cada STRIDE grupos de muestras para calcular RMS.
+// El renderer aplica attack/decay smoothing de todas formas, así que
+// reducir la resolución de muestreo 4× no tiene efecto visual perceptible.
+private const val STRIDE = 4
+
 class AudioDecoder {
 
     /**
@@ -41,10 +46,13 @@ class AudioDecoder {
         val totalUs = if (format.containsKey(MediaFormat.KEY_DURATION))
             format.getLong(MediaFormat.KEY_DURATION) else 0L
 
-        val samplesPerFrame = sampleRate / fps
-        val rmsAccum        = ArrayList<Float>()
-        var frameSumSq      = 0.0
-        var frameSamples    = 0
+        // Con stride STRIDE procesamos 1 de cada STRIDE muestras → misma cantidad de frames RMS,
+        // pero cada frame se calcula con sampleRate/fps/STRIDE muestras en vez de sampleRate/fps.
+        val samplesPerRmsFrame = (sampleRate / fps / STRIDE).coerceAtLeast(1)
+        val skipShorts         = channelCount * (STRIDE - 1)
+        val rmsAccum           = ArrayList<Float>()
+        var frameSumSq         = 0.0
+        var frameSamples       = 0
 
         val info      = MediaCodec.BufferInfo()
         var inputEOS  = false
@@ -78,14 +86,18 @@ class AudioDecoder {
                     outBuf.limit(info.offset + info.size)
                     val sb = outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
 
-                    // Procesar muestras de a channelCount (grupo = un sample estéreo/multicanal)
+                    // Procesar 1 de cada STRIDE grupos de muestras.
+                    // sb.position() es O(1) en ShortBuffer → no lee los shorts saltados.
                     while (sb.remaining() >= channelCount) {
                         var sum = 0L
                         for (c in 0 until channelCount) sum += sb.get().toLong()
+                        if (skipShorts > 0 && sb.remaining() >= skipShorts)
+                            sb.position(sb.position() + skipShorts)
+
                         val mono = (sum.toDouble() / channelCount)
                         frameSumSq += mono * mono
                         frameSamples++
-                        if (frameSamples >= samplesPerFrame) {
+                        if (frameSamples >= samplesPerRmsFrame) {
                             rmsAccum.add(sqrt(frameSumSq / frameSamples).toFloat())
                             frameSumSq = 0.0; frameSamples = 0
                         }

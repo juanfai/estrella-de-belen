@@ -92,10 +92,17 @@ class ImportService : Service() {
         ImportManager.updateState(ImportState(isLoading = true, loadedUri = uri, displayName = name))
 
         try {
+            // Throttle: el codec entrega miles de callbacks por canción.
+            // Notificar solo cuando el porcentaje entero cambia (máx 100 updates vs ~7000).
+            var lastPct = -1
             val (rms, _) = AudioDecoder().decodeToRms(applicationContext, uri, 30) { p ->
-                ImportManager.updateState(ImportState(
-                    isLoading = true, progress = p, loadedUri = uri, displayName = name))
-                notificationManager.notify(NOTIFICATION_ID, buildNotification(p))
+                val pct = (p * 100).toInt()
+                if (pct > lastPct) {
+                    lastPct = pct
+                    ImportManager.updateState(ImportState(
+                        isLoading = true, progress = p, loadedUri = uri, displayName = name))
+                    notificationManager.notify(NOTIFICATION_ID, buildNotification(p))
+                }
             }
             ImportManager.updateState(ImportState(
                 isLoading   = false,
