@@ -108,10 +108,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    @Volatile private var cancelExportFlag = false
+
     fun startExport() {
         val uri = _audioUri.value ?: return
         if (_exportState.value.isExporting) return
 
+        cancelExportFlag = false
         _exportState.value = ExportState(isExporting = true)
         TaskService.startExport(ctx)
         viewModelScope.launch(Dispatchers.IO) {
@@ -122,15 +125,27 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     outputName     = outputName.value,
                     precomputedRms = _rmsFrames.value
                 ).export { progress ->
+                    if (cancelExportFlag) throw Exception("cancel")
                     _exportState.value = _exportState.value.copy(progress = progress)
                 }
                 _exportState.value = ExportState(isExporting = false, progress = 1f, exportedUri = resultUri)
             } catch (e: Exception) {
-                _exportState.value = ExportState(isExporting = false, error = "Error al exportar: ${e.message}")
+                if (cancelExportFlag) {
+                    // Cancelado por el usuario → volver al estado previo sin mostrar error
+                    _exportState.value = ExportState()
+                } else {
+                    _exportState.value = ExportState(isExporting = false, error = "Error al exportar: ${e.message}")
+                }
             } finally {
+                cancelExportFlag = false
                 TaskService.stop(ctx)
             }
         }
+    }
+
+    /** Señala la cancelación del export en curso. El pipeline la detecta en el próximo onProgress. */
+    fun cancelExport() {
+        cancelExportFlag = true
     }
 
     fun clearExportState() {

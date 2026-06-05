@@ -102,6 +102,7 @@ class VideoExporter(
         var smoothedAmp = 0f
         var haloAmp     = 0f
 
+        var encodedOk = false
         try {
             rmsFrames.forEachIndexed { i, targetAmp ->
                 val wFactor = if (targetAmp >= smoothedAmp) VisualConfig.GLOW_ATTACK else VisualConfig.GLOW_DECAY
@@ -122,13 +123,17 @@ class VideoExporter(
                 onFrame(i)
             }
             encoder.drainEncoder(true)
+            encodedOk = true
             return encoder.capturedFormat
                 ?: error("El encoder no emitió formato de salida")
         } finally {
             try { renderer.release()             } catch (_: Exception) {}
             try { egl.destroySurface(eglSurface) } catch (_: Exception) {}
             try { egl.release()                  } catch (_: Exception) {}
-            encoder.release()  // propaga si muxer.stop() falla → archivo correcto o excepción clara
+            // Si codificamos correctamente, propagar errores de release() (ej. disco lleno al cerrar muxer).
+            // Si hay una excepción en vuelo (cancelación u otro), swallow para no suprimirla.
+            if (encodedOk) encoder.release()
+            else try { encoder.release() } catch (_: Exception) {}
         }
     }
 

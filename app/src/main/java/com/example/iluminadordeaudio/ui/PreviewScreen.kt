@@ -7,7 +7,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.ui.text.SpanStyle
@@ -45,7 +47,8 @@ fun PreviewScreen(
     val outputName       by viewModel.outputName.collectAsState()
     val isPreviewPlaying by viewModel.isPreviewPlaying.collectAsState()
 
-    var showExportDialog by remember { mutableStateOf(false) }
+    var showExportDialog  by remember { mutableStateOf(false) }
+    var showCancelDialog  by remember { mutableStateOf(false) }
     var exportStartMs    by remember { mutableLongStateOf(0L) }
     LaunchedEffect(exportState.isExporting) {
         exportStartMs = if (exportState.isExporting) System.currentTimeMillis() else 0L
@@ -184,10 +187,6 @@ fun PreviewScreen(
                 }
 
                 if (exportState.isExporting) {
-                    LinearProgressIndicator(
-                        progress = { exportState.progress },
-                        modifier = Modifier.fillMaxWidth()
-                    )
                     val pct = (exportState.progress * 100).toInt()
                     val etaText = if (exportState.progress > 0.03f && exportStartMs > 0L) {
                         val elapsedMs   = nowMs - exportStartMs
@@ -195,9 +194,38 @@ fun PreviewScreen(
                         val sec = (remainingMs / 1000).toInt().coerceAtLeast(0)
                         if (sec < 60) "~${sec}s" else "~${sec / 60}m ${sec % 60}s"
                     } else "..."
-                    Row(modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween) {
+
+                    // Fila 1: barra de progreso centrada verticalmente con el botón
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { exportState.progress },
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(34.dp)
+                                .border(1.5.dp, LAV_DEEP, CircleShape)
+                                .clip(CircleShape)
+                                .clickable { showCancelDialog = true }
+                        ) {
+                            Text(
+                                text       = "✕",
+                                color      = LAV_SOFT,
+                                fontSize   = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    // Fila 2: porcentaje y tiempo estimado
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(modifier = Modifier.fillMaxWidth()) {
                         Text("Exportando… $pct %", color = Color.White, fontSize = 13.sp)
+                        Spacer(modifier = Modifier.weight(1f))
                         Text(etaText, color = Color(0xFFCCADFF), fontSize = 13.sp)
                     }
                 } else {
@@ -258,6 +286,29 @@ fun PreviewScreen(
                 ) { Text("Cerrar", color = Color.Gray) }
             }
         }
+    }
+
+    // ── Modal cancelar exportación ────────────────────────────────────────────
+    if (showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            title   = { Text("¿Cancelar exportación?") },
+            text    = { Text("Se perderá el progreso actual.") },
+            confirmButton = {
+                AppButton(
+                    onClick = {
+                        showCancelDialog = false
+                        viewModel.cancelExport()
+                    },
+                    filled = true
+                ) { Text("SÍ, CANCELAR") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelDialog = false }) {
+                    Text("No, continuar", color = Color.Gray)
+                }
+            }
+        )
     }
 
     // ── Modal nombre de archivo ────────────────────────────────────────────────
