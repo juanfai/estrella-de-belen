@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.iluminadordeaudio.audio.AudioDecoder
+import com.example.iluminadordeaudio.export.TaskService
 import com.example.iluminadordeaudio.export.VideoExporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,6 +53,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         previewPlayer?.release(); previewPlayer = null
         isPreviewPlaying.value = false
         loadingProgress.value  = 0f
+        TaskService.startImport(ctx)
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val (rms, _) = AudioDecoder().decodeToRms(ctx, uri, 30) { p ->
@@ -61,6 +63,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 _rmsFrames.value = rms
             } catch (e: Exception) {
                 _exportState.value = ExportState(error = "Error al cargar audio: ${e.message}")
+            } finally {
+                TaskService.stop(ctx)
             }
         }
     }
@@ -109,19 +113,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (_exportState.value.isExporting) return
 
         _exportState.value = ExportState(isExporting = true)
+        TaskService.startExport(ctx)
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val resultUri = VideoExporter(
                     context        = ctx,
                     audioUri       = uri,
                     outputName     = outputName.value,
-                    precomputedRms = _rmsFrames.value   // evita re-decodificar el audio
+                    precomputedRms = _rmsFrames.value
                 ).export { progress ->
                     _exportState.value = _exportState.value.copy(progress = progress)
                 }
                 _exportState.value = ExportState(isExporting = false, progress = 1f, exportedUri = resultUri)
             } catch (e: Exception) {
                 _exportState.value = ExportState(isExporting = false, error = "Error al exportar: ${e.message}")
+            } finally {
+                TaskService.stop(ctx)
             }
         }
     }
