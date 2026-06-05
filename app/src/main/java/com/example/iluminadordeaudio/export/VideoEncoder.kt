@@ -24,6 +24,14 @@ class VideoEncoder(
     private var muxerStarted = false
     private val bufferInfo = MediaCodec.BufferInfo()
 
+    /**
+     * El MediaFormat que emitió el encoder al momento de INFO_OUTPUT_FORMAT_CHANGED.
+     * Contiene csd-0/csd-1 (SPS/PPS de H.264) que el muxer de salida necesita.
+     * Disponible después de que drainEncoder() procese al menos el primer output.
+     */
+    var capturedFormat: MediaFormat? = null
+        private set
+
     init {
         muxer = MediaMuxer(outputFile.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
 
@@ -55,7 +63,9 @@ class VideoEncoder(
                 }
                 outputIdx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                     check(!muxerStarted) { "Formato de salida cambió dos veces" }
-                    videoTrackIndex = muxer.addTrack(codec.outputFormat)
+                    val fmt = codec.outputFormat
+                    capturedFormat = fmt          // guardar antes de pasarlo al muxer
+                    videoTrackIndex = muxer.addTrack(fmt)
                     muxer.start()
                     muxerStarted = true
                 }
@@ -79,10 +89,15 @@ class VideoEncoder(
     }
 
     fun release() {
-        codec.stop()
-        codec.release()
-        inputSurface.release()
+        // Limpiar codec y surface primero (son independientes del muxer).
+        try { codec.stop()    } catch (_: Exception) {}
+        try { codec.release() } catch (_: Exception) {}
+        try { inputSurface.release() } catch (_: Exception) {}
+
+        // muxer.stop() escribe el moov atom y finaliza el archivo MP4.
+        // Si falla (ej. sin espacio), la excepción DEBE propagarse: el archivo quedó corrupto
+        // y continuar con el remux produciría "Failed to add track to the muxer".
         if (muxerStarted) muxer.stop()
-        muxer.release()
+        try { muxer.release() } catch (_: Exception) {}
     }
 }
