@@ -296,12 +296,15 @@ class VideoExporter(
         var encPtsUs          = 0L      // PTS acumulado para el encoder
         val bytesPerPcmSample = 2 * channels  // 16-bit × N canales
 
+        var lastReportedPct = -1  // throttle: reportar solo cuando el porcentaje entero cambia
+
         try {
             while (!encOutputDone) {
+                var madeProgress = false
 
-                // 1. Extractor → decoder input
+                // 1. Extractor → decoder input (no-blocking)
                 if (!decInputDone) {
-                    val idx = decoder.dequeueInputBuffer(10_000L)
+                    val idx = decoder.dequeueInputBuffer(0L)
                     if (idx >= 0) {
                         val buf  = decoder.getInputBuffer(idx)!!
                         val size = srcExtractor.readSampleData(buf, 0)
@@ -312,13 +315,14 @@ class VideoExporter(
                             decoder.queueInputBuffer(idx, 0, size, srcExtractor.sampleTime, 0)
                             srcExtractor.advance()
                         }
+                        madeProgress = true
                     }
                 }
 
-                // 2. Decoder output → pcmQueue (10ms timeout: evita busy-wait cuando el decoder
-                //    está procesando su último bloque después de recibir EOS)
-                if (!decOutputDone) {
-                    val idx = decoder.dequeueOutputBuffer(decInfo, 10_000L)
+                // 2. Decoder output → pcmQueue (no-blocking).
+                // Backpressure: no drenar si la cola ya tiene muchos chunks (evita OOM).
+                if (!decOutputDone && pcmQueue.size < 32) {
+                    val idx = decoder.dequeueOutputBuffer(decInfo, 0L)
                     if (idx >= 0) {
                         if (decInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) decOutputDone = true
                         if (decInfo.size > 0) {
@@ -329,19 +333,18 @@ class VideoExporter(
                             pcmQueue.addLast(bytes)
                         }
                         decoder.releaseOutputBuffer(idx, false)
+                        madeProgress = true
                     }
                 }
 
-                // 3. pcmQueue → encoder input
-                // encInputDone evita enviar EOS múltiples veces: mandar EOS dos veces puede
-                // dejar el encoder en un estado inconsistente y congelar el loop.
+                // 3. pcmQueue → encoder input (no-blocking).
+                // encInputDone evita enviar EOS múltiples veces (puede congelar el encoder).
                 if (!encInputDone && (pcmQueue.isNotEmpty() || (decOutputDone && pcmQueue.isEmpty()))) {
-                    val idx = encoder.dequeueInputBuffer(10_000L)
+                    val idx = encoder.dequeueInputBuffer(0L)
                     if (idx >= 0) {
                         val encBuf = encoder.getInputBuffer(idx)!!
                         encBuf.clear()
                         if (pcmQueue.isNotEmpty()) {
-                            // Llenar el buffer del encoder con chunks PCM disponibles
                             var written = 0
                             while (pcmQueue.isNotEmpty() && written < encBuf.capacity()) {
                                 val chunk   = pcmQueue.first()
@@ -357,19 +360,20 @@ class VideoExporter(
                             encoder.queueInputBuffer(idx, 0, written, encPtsUs, 0)
                             encPtsUs += (written / bytesPerPcmSample) * 1_000_000L / sampleRate
                         } else {
-                            // Decoder terminó y la cola está vacía → señalar EOS al encoder (una sola vez)
                             encoder.queueInputBuffer(idx, 0, 0, encPtsUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             encInputDone = true
                         }
+                        madeProgress = true
                     }
                 }
 
-                // 4. Encoder output → muxer
-                val idx = encoder.dequeueOutputBuffer(encInfo, 10_000L)
+                // 4. Encoder output → muxer (no-blocking)
+                val idx = encoder.dequeueOutputBuffer(encInfo, 0L)
                 when {
                     idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                         muxTrackIdx  = muxer.addTrack(encoder.outputFormat)
                         muxer.start(); muxerStarted = true
+                        madeProgress = true
                     }
                     idx >= 0 -> {
                         if (encInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) encOutputDone = true
@@ -379,14 +383,24 @@ class VideoExporter(
                             encBuf.position(encInfo.offset)
                             encBuf.limit(encInfo.offset + encInfo.size)
                             muxer.writeSampleData(muxTrackIdx, encBuf, encInfo)
-                            // Reportar progreso basado en PTS del audio codificado
+                            // Throttle: reportar solo al cambiar el porcentaje entero (max 100 callbacks).
+                            // Sin esto: ~43 callbacks/seg × 1800 seg = 78.000 StateFlow emissions → ETA fluctúa.
                             if (maxDurationUs > 0) {
-                                onProgress((encInfo.presentationTimeUs.toFloat() / maxDurationUs).coerceIn(0f, 1f))
+                                val pct = (encInfo.presentationTimeUs * 100L / maxDurationUs).toInt()
+                                if (pct > lastReportedPct) {
+                                    lastReportedPct = pct
+                                    onProgress(pct / 100f)
+                                }
                             }
                         }
                         encoder.releaseOutputBuffer(idx, false)
+                        madeProgress = true
                     }
                 }
+
+                // Cuando ningún codec tiene datos listos, dormir 1 ms para no quemar CPU.
+                // Sin esto con timeouts en 0L el loop haría busy-wait 100%.
+                if (!madeProgress) Thread.sleep(1L)
             }
         } finally {
             try { decoder.stop();  decoder.release()  } catch (_: Exception) {}
