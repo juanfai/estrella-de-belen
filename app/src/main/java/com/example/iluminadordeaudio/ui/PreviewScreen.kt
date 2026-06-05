@@ -128,6 +128,8 @@ fun PreviewScreen(
                 )
                 if (rmsFrames == null && audioUri != null) {
                     val loadingProgress by viewModel.loadingProgress.collectAsState()
+
+                    // Spinner + porcentaje: centrados en el recuadro
                     Column(
                         modifier            = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -137,9 +139,38 @@ fun PreviewScreen(
                         if (loadingProgress > 0f) {
                             Text(
                                 text     = "${(loadingProgress * 100).toInt()} %",
-                                color    = Color(0xFFCCADFF),   // lavanda claro
+                                color    = Color(0xFFCCADFF),
                                 fontSize = 13.sp
                             )
+                        }
+                    }
+
+                    // Botón cancel: a medio camino entre el porcentaje (centro = 50%) y el borde
+                    // inferior (100%). El contenedor ocupa el 75% de la altura del recuadro; el
+                    // botón se alinea al fondo de ese contenedor → su centro queda en ~75%.
+                    if (loadingProgress > 0f) {
+                        Box(
+                            contentAlignment = Alignment.BottomCenter,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(0.75f)
+                                .align(Alignment.TopCenter)
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .border(1.dp, LAV_DEEP, CircleShape)
+                                    .clip(CircleShape)
+                                    .clickable { viewModel.cancelImport() }
+                            ) {
+                                Text(
+                                    text       = "✕",
+                                    color      = LAV_SOFT,
+                                    fontSize   = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
@@ -176,14 +207,15 @@ fun PreviewScreen(
                     filled   = isPreviewPlaying && previewEnabled
                 ) { Text("PREVIEW") }
 
+                val isImporting = audioUri != null && rmsFrames == null
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     AppButton(onClick = onRecord,    modifier = Modifier.weight(1f),
-                        enabled = !exportState.isExporting) { Text("GRABAR") }
+                        enabled = !exportState.isExporting && !isImporting) { Text("GRABAR") }
                     AppButton(onClick = onPickAudio, modifier = Modifier.weight(1f),
-                        enabled = !exportState.isExporting) { Text("IMPORTAR") }
+                        enabled = !exportState.isExporting && !isImporting) { Text("IMPORTAR") }
                 }
 
                 if (exportState.isExporting) {

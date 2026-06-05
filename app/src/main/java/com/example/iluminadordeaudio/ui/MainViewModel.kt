@@ -46,6 +46,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private var previewPlayer: MediaPlayer? = null
 
+    @Volatile private var cancelImportFlag = false
+
     fun loadAudio(uri: Uri, displayName: String?) {
         _audioUri.value = uri
         _audioName.value = displayName
@@ -53,20 +55,35 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         previewPlayer?.release(); previewPlayer = null
         isPreviewPlaying.value = false
         loadingProgress.value  = 0f
+        cancelImportFlag = false
         TaskService.startImport(ctx)
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val (rms, _) = AudioDecoder().decodeToRms(ctx, uri, 30) { p ->
+                    if (cancelImportFlag) throw Exception("cancel")
                     loadingProgress.value = p
                 }
                 loadingProgress.value = 1f
                 _rmsFrames.value = rms
             } catch (e: Exception) {
-                _exportState.value = ExportState(error = "Error al cargar audio: ${e.message}")
+                if (cancelImportFlag) {
+                    // Cancelado por el usuario → volver al estado vacío
+                    _audioUri.value    = null
+                    _audioName.value   = null
+                    loadingProgress.value = 0f
+                } else {
+                    _exportState.value = ExportState(error = "Error al cargar audio: ${e.message}")
+                }
             } finally {
+                cancelImportFlag = false
                 TaskService.stop(ctx)
             }
         }
+    }
+
+    /** Cancela el import en curso. El decoder lo detecta en el próximo onProgress. */
+    fun cancelImport() {
+        cancelImportFlag = true
     }
 
     fun togglePreviewPlay() {
