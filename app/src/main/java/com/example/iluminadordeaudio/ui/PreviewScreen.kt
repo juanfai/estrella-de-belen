@@ -51,6 +51,16 @@ fun PreviewScreen(
         exportStartMs = if (exportState.isExporting) System.currentTimeMillis() else 0L
     }
 
+    // Tick cada 1 segundo para que el countdown del ETA siempre avance,
+    // independientemente de si el progreso está cambiando o no.
+    var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(exportState.isExporting) {
+        while (isActive) {
+            nowMs = System.currentTimeMillis()
+            delay(1_000L)
+        }
+    }
+
     // GL renderer — mismo shader que el export, renderiza directo en la GPU
     val glRenderer = remember { GlowPreviewRenderer() }
     DisposableEffect(Unit) { onDispose { glRenderer.release() } }
@@ -180,7 +190,7 @@ fun PreviewScreen(
                     )
                     val pct = (exportState.progress * 100).toInt()
                     val etaText = if (exportState.progress > 0.03f && exportStartMs > 0L) {
-                        val elapsedMs   = System.currentTimeMillis() - exportStartMs
+                        val elapsedMs   = nowMs - exportStartMs
                         val remainingMs = (elapsedMs / exportState.progress * (1f - exportState.progress)).toLong()
                         val sec = (remainingMs / 1000).toInt().coerceAtLeast(0)
                         if (sec < 60) "~${sec}s" else "~${sec / 60}m ${sec % 60}s"
