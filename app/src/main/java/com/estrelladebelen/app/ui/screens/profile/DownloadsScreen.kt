@@ -1,5 +1,9 @@
 package com.estrelladebelen.app.ui.screens.profile
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +16,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +43,9 @@ fun DownloadsScreen(
     val downloads by viewModel.downloads.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    // Estado para el diálogo de confirmación
+    var meditationToDelete by remember { mutableStateOf<DownloadedMeditation?>(null) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -52,24 +61,56 @@ fun DownloadsScreen(
             )
         }
     ) { innerPadding ->
+        // Mostrar Diálogo si hay una meditación seleccionada para borrar
+        meditationToDelete?.let { meditation ->
+            AlertDialog(
+                onDismissRequest = { meditationToDelete = null },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.removeDownload(context, meditation)
+                            meditationToDelete = null
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(stringResource(R.string.action_delete))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { meditationToDelete = null }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                },
+                title = { Text(stringResource(R.string.delete_dialog_title)) },
+                text = { Text(stringResource(R.string.delete_dialog_message, meditation.title)) }
+            )
+        }
+
         if (downloads.isEmpty()) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize() // Ocupa todo el espacio disponible bajo la TopAppBar
+                    .padding(innerPadding)
+                    .padding(horizontal = 32.dp), // Margen a los costados para que el texto no toque los bordes
+                contentAlignment = Alignment.Center // Centro perfecto tanto horizontal como vertical
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    modifier = Modifier.offset(y = (-20).dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
                     Text(
                         text = stringResource(R.string.downloads_empty_title),
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center // Asegura que el texto largo se centre
                     )
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.downloads_empty_subtitle),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center // Asegura que el subtítulo se centre
                     )
                 }
             }
@@ -81,12 +122,21 @@ fun DownloadsScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(downloads, key = { it.meditationId }) { item ->
-                    DownloadItem(
-                        item = item,
-                        onPlayClick = { onPlayClick(item.meditationId) },
-                        onDeleteClick = { viewModel.removeDownload(context, item) }
-                    )
+                // La animación "animateItem" requiere que los items tengan una Key única
+                items(
+                    items = downloads,
+                    key = { it.meditationId }
+                ) { item ->
+                    Box(modifier = Modifier.animateItem(
+                        fadeOutSpec = tween(300),
+                        placementSpec = tween(300)
+                    )) {
+                        DownloadItem(
+                            item = item,
+                            onPlayClick = { onPlayClick(item.meditationId) },
+                            onDeleteClick = { meditationToDelete = item }
+                        )
+                    }
                 }
             }
         }
@@ -116,6 +166,7 @@ private fun DownloadItem(
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // ... (Resto de tu diseño de Box y Column igual que antes)
             Box(
                 modifier = Modifier
                     .size(40.dp)

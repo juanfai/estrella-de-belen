@@ -40,6 +40,9 @@
     <!-- Downloads -->
     <string name="downloads_empty_title">Sin descargas</string>
     <string name="downloads_empty_subtitle">Descargá meditaciones para escucharlas sin conexión</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="delete_dialog_title">Eliminar descarga</string>
+    <string name="delete_dialog_message">¿Estás seguro de que quieres eliminar \"%s\" de tus descargas?</string>
 
     <!-- Favorites -->
     <string name="favorites_empty_title">Sin favoritas</string>
