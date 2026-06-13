@@ -34,7 +34,12 @@
     <!-- Actions -->
     <string name="action_favorite">Favorito</string>
     <string name="action_download">Descargar</string>
+    <string name="action_delete">Eliminar</string>
     <string name="action_back">Volver</string>
+
+    <!-- Downloads -->
+    <string name="downloads_empty_title">Sin descargas</string>
+    <string name="downloads_empty_subtitle">Descargá meditaciones para escucharlas sin conexión</string>
 
     <!-- Navigation -->
     <string name="nav_home">Inicio</string>

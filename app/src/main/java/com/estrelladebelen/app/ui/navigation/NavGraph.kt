@@ -26,6 +26,7 @@ import com.estrelladebelen.app.ui.screens.auth.RegisterScreen
 import com.estrelladebelen.app.ui.screens.home.HomeScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerViewModel
+import com.estrelladebelen.app.ui.screens.profile.DownloadsScreen
 import com.estrelladebelen.app.ui.screens.profile.ProfileScreen
 import com.estrelladebelen.app.ui.screens.profile.ProfileViewModel
 import com.estrelladebelen.app.ui.theme.LavenderBackground
@@ -152,6 +153,19 @@ fun AppNavGraph() {
                         navController.navigate(Screen.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }
+                    },
+                    onDownloadsClick = {
+                        navController.navigate(Screen.Downloads.route)
+                    },
+                    viewModel = profileViewModel
+                )
+            }
+
+            composable(Screen.Downloads.route) {
+                DownloadsScreen(
+                    onBack = { navController.popBackStack() },
+                    onPlayClick = { meditationId ->
+                        navController.navigate(Screen.Player.createRoute(meditationId))
                     },
                     viewModel = profileViewModel
                 )

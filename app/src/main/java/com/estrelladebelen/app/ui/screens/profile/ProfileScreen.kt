@@ -25,6 +25,7 @@ import com.estrelladebelen.app.ui.theme.Moonbeam
 @Composable
 fun ProfileScreen(
     onSignOut: () -> Unit,
+    onDownloadsClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val user by viewModel.userProfile.collectAsStateWithLifecycle()
@@ -100,7 +101,7 @@ fun ProfileScreen(
         SectionLabel(stringResource(R.string.profile_library))
         Spacer(Modifier.height(8.dp))
         ProfileActionRow(icon = Icons.Filled.Favorite, label = stringResource(R.string.profile_favorites)) {}
-        ProfileActionRow(icon = Icons.Filled.Download, label = stringResource(R.string.profile_downloads)) {}
+        ProfileActionRow(icon = Icons.Filled.Download, label = stringResource(R.string.profile_downloads), onClick = onDownloadsClick)
 
         Spacer(Modifier.height(28.dp))
 
