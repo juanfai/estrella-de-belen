@@ -57,6 +57,11 @@ fun PlayerScreen(
         viewModel.startBreathingIfIdle()
     }
 
+    // Navigate back when audio ends
+    LaunchedEffect(uiState.playbackEnded) {
+        if (uiState.playbackEnded) onBack()
+    }
+
     // Auto-hide controls after 3 seconds
     LaunchedEffect(controlsVisible) {
         if (controlsVisible) {

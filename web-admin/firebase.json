@@ -1,6 +1,5 @@
 {
   "hosting": {
-    "site": "estrella-de-belen-85a2b",
     "public": "public",
     "ignore": ["firebase.json", "**/.*"],
     "rewrites": [{ "source": "**", "destination": "/index.html" }]
