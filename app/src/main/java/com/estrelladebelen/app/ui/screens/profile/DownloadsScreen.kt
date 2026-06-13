@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.estrelladebelen.app.R
 import com.estrelladebelen.app.data.local.entity.DownloadedMeditation
 import com.estrelladebelen.app.render.VisualConfig
+import com.estrelladebelen.app.ui.theme.Fog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -159,7 +160,7 @@ private fun DownloadItem(
                 Icon(
                     Icons.Filled.Delete,
                     contentDescription = stringResource(R.string.action_delete),
-                    tint = MaterialTheme.colorScheme.error,
+                    tint = Fog,
                     modifier = Modifier.size(20.dp)
                 )
             }
