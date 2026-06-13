@@ -32,7 +32,8 @@ fun MeditationCard(
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onDownloadClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDownloading: Boolean = false
 ) {
     val shape = RoundedCornerShape(16.dp)
 
@@ -125,13 +126,25 @@ fun MeditationCard(
                         )
                     }
                     Spacer(Modifier.width(4.dp))
-                    IconButton(onClick = onDownloadClick, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = if (isDownloaded) Icons.Filled.DownloadDone else Icons.Filled.Download,
-                            contentDescription = stringResource(R.string.action_download),
-                            tint = if (isDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    IconButton(
+                        onClick = onDownloadClick,
+                        modifier = Modifier.size(32.dp),
+                        enabled = !isDownloading
+                    ) {
+                        if (isDownloading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            Icon(
+                                imageVector = if (isDownloaded) Icons.Filled.DownloadDone else Icons.Filled.Download,
+                                contentDescription = stringResource(R.string.action_download),
+                                tint = if (isDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }

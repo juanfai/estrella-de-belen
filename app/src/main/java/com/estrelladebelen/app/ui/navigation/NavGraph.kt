@@ -130,12 +130,10 @@ fun AppNavGraph() {
                 HomeScreen(
                     userName    = userProfile?.displayName ?: "",
                     favorites   = userProfile?.favorites ?: emptyList(),
-                    downloads   = emptyList(),
                     onMeditationClick = { id ->
                         navController.navigate(Screen.Player.createRoute(id))
                     },
-                    onFavoriteClick = { /* TODO: toggle via ProfileViewModel */ },
-                    onDownloadClick = { /* TODO: download logic */ }
+                    onFavoriteClick = { /* TODO: toggle via ProfileViewModel */ }
                 )
             }
 

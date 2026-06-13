@@ -1,8 +1,8 @@
 package com.estrelladebelen.app.ui.screens.home
+import androidx.compose.ui.tooling.preview.Preview
+import com.estrelladebelen.app.ui.theme.EstrellaDeBelénTheme
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,10 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,14 +28,33 @@ import java.util.Calendar
 fun HomeScreen(
     userName: String,
     favorites: List<String>,
-    downloads: List<String>,
     onMeditationClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
-    onDownloadClick: (String) -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    HomeScreenContent(
+        uiState           = uiState,
+        userName          = userName,
+        favorites         = favorites,
+        onMeditationClick = onMeditationClick,
+        onFavoriteClick   = onFavoriteClick,
+        onDownloadClick   = { id -> viewModel.downloadMeditation(context, id) },
+        onFilterSelected  = viewModel::setFilter
+    )
+}
 
+@Composable
+private fun HomeScreenContent(
+    uiState: HomeUiState,
+    userName: String,
+    favorites: List<String>,
+    onMeditationClick: (String) -> Unit,
+    onFavoriteClick: (String) -> Unit,
+    onDownloadClick: (String) -> Unit,
+    onFilterSelected: (DurationFilter) -> Unit
+) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         contentPadding = PaddingValues(bottom = 24.dp),
@@ -74,7 +93,7 @@ fun HomeScreen(
         item(span = { GridItemSpan(2) }) {
             DurationFilterRow(
                 activeFilter = uiState.activeFilter,
-                onFilterSelected = viewModel::setFilter,
+                onFilterSelected = onFilterSelected,
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
         }
@@ -92,7 +111,8 @@ fun HomeScreen(
                 MeditationCard(
                     meditation      = meditation,
                     isFavorite      = meditation.id in favorites,
-                    isDownloaded    = meditation.id in downloads,
+                    isDownloaded    = meditation.id in uiState.downloads,
+                    isDownloading   = meditation.id in uiState.downloadingIds,
                     onClick         = { onMeditationClick(meditation.id) },
                     onFavoriteClick = { onFavoriteClick(meditation.id) },
                     onDownloadClick = { onDownloadClick(meditation.id) },
@@ -124,7 +144,6 @@ private fun FeaturedCard(meditation: Meditation, onClick: () -> Unit, modifier: 
                 )
             }
 
-            // Gradient scrim for readability
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -213,4 +232,53 @@ private fun greeting(name: String): String {
         else      -> "Buenas noches"
     }
     return if (name.isNotBlank()) "$salutation, $name" else salutation
+}
+
+// ─── Preview ───────────────────────────────────────────────
+
+private val previewMeditations = listOf(
+    Meditation(id = "1", title = "Paz interior",     category = "paz",   durationSeconds = 300,  haloColor = "#7C3AED", createdAt = System.currentTimeMillis()),
+    Meditation(id = "2", title = "Sueño profundo",   category = "sueño", durationSeconds = 600,  haloColor = "#3B82F6"),
+    Meditation(id = "3", title = "Concentración",    category = "foco",  durationSeconds = 1200, haloColor = "#10B981"),
+    Meditation(id = "4", title = "Relajación total", category = "paz",   durationSeconds = 900,  haloColor = "#F97316"),
+)
+
+private val previewUiState = HomeUiState(
+    isLoading   = false,
+    meditations = previewMeditations,
+    featured    = previewMeditations.first(),
+    downloads   = listOf("2"),
+    downloadingIds = setOf("3")
+)
+
+@Preview(showBackground = true, showSystemUi = true, name = "Home")
+@Composable
+private fun HomeScreenPreview() {
+    EstrellaDeBelénTheme {
+        HomeScreenContent(
+            uiState           = previewUiState,
+            userName          = "Juan",
+            favorites         = listOf("1"),
+            onMeditationClick = {},
+            onFavoriteClick   = {},
+            onDownloadClick   = {},
+            onFilterSelected  = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Home - cargando")
+@Composable
+private fun HomeScreenLoadingPreview() {
+    EstrellaDeBelénTheme {
+        HomeScreenContent(
+            uiState           = HomeUiState(isLoading = true),
+            userName          = "Juan",
+            favorites         = emptyList(),
+            onMeditationClick = {},
+            onFavoriteClick   = {},
+            onDownloadClick   = {},
+            onFilterSelected  = {}
+        )
+    }
 }
