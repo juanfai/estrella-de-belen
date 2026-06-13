@@ -142,12 +142,12 @@ private fun FeaturedCard(meditation: Meditation, onClick: () -> Unit, modifier: 
             ) {
                 Surface(
                     shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
+                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.9f)
                 ) {
                     Text(
                         text = stringResource(R.string.home_featured_label),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
                     )
                 }

@@ -53,10 +53,9 @@ fun AppNavGraph() {
     val showMiniPlayer = playerState.meditation != null && currentRoute != Screen.Player.route
 
     Scaffold(
-        containerColor = LavenderBackground,
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar(containerColor = LavenderBackground) {
+                NavigationBar {
                     val currentDest = currentBackStack?.destination
                     bottomNavItems.forEach { (screen, meta) ->
                         val (labelRes, icon) = meta
@@ -70,7 +69,11 @@ fun AppNavGraph() {
                                 }
                             },
                             icon = { Icon(icon, contentDescription = stringResource(labelRes)) },
-                            label = { Text(stringResource(labelRes)) }
+                            label = { Text(stringResource(labelRes)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                indicatorColor = androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer,
+                                selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.onTertiaryContainer
+                            )
                         )
                     }
                 }

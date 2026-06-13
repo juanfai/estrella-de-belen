@@ -41,7 +41,7 @@ fun SplashScreen(onReady: () -> Unit) {
             Text(
                 text = "✦",
                 fontSize = 56.sp,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.tertiary
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(

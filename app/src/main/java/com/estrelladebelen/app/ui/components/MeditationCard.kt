@@ -65,13 +65,13 @@ fun MeditationCard(
                 if (meditation.isNew) {
                     Surface(
                         shape = RoundedCornerShape(bottomEnd = 10.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
                         modifier = Modifier.align(Alignment.TopStart)
                     ) {
                         Text(
                             text = stringResource(R.string.badge_new),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
@@ -95,12 +95,12 @@ fun MeditationCard(
                     if (meditation.category.isNotBlank()) {
                         Surface(
                             shape = RoundedCornerShape(50),
-                            color = MaterialTheme.colorScheme.secondaryContainer
+                            color = MaterialTheme.colorScheme.tertiaryContainer
                         ) {
                             Text(
                                 text = meditation.category,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                             )
                         }
