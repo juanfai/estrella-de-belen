@@ -65,17 +65,43 @@ class PlayerViewModel : ViewModel() {
 
     @Volatile private var rmsFrames: FloatArray? = null
 
+    // True only after STATE_READY is received for the current session.
+    // Guards against media3 replaying STATE_ENDED / isPlaying=false from the
+    // previous session to a newly registered listener.
+    private var sessionReady = false
+
     fun loadMeditation(context: Context, meditationId: String) {
+        // Synchronous cleanup: cancel all jobs and release the old controller
+        // so its listener can't fire events that would cancel the new animation.
+        sessionReady = false
+        animationJob?.cancel();  animationJob = null
+        progressJob?.cancel();   progressJob  = null
+        decodeJob?.cancel();     decodeJob    = null
+        rmsFrames    = null
+        smoothedGlow = 0f
+        smoothedHalo = 0f
+        breathingTime = 0f
+        controller?.removeListener(playerListener)
+        controller?.release();   controller = null
+        controllerFuture?.cancel(true); controllerFuture = null
+
         viewModelScope.launch {
             val meditation = repository.getById(meditationId) ?: return@launch
             val haloColor = runCatching { VisualConfig.parseColor(meditation.haloColor) }
                 .getOrDefault(VisualConfig.DEFAULT_HALO_COLOR)
             _uiState.value = _uiState.value.copy(
-                meditation = meditation,
-                glowColor  = VisualConfig.GLOW_COLOR,
-                haloColor  = haloColor,
-                durationMs = meditation.durationSeconds * 1000L
+                meditation    = meditation,
+                positionMs    = 0L,
+                durationMs    = meditation.durationSeconds * 1000L,
+                glowAmplitude = 0f,
+                haloAmplitude = 0f,
+                stretchY      = 1f,
+                glowColor     = VisualConfig.GLOW_COLOR,
+                haloColor     = haloColor,
+                playbackEnded = false
             )
+            // Start breathing here — deterministic order, no race with LaunchedEffect.
+            startBreathingAnimation()
             connectService(context, meditation)
         }
     }
@@ -118,13 +144,17 @@ class PlayerViewModel : ViewModel() {
             if (isPlaying) {
                 if (rmsFrames != null) startAudioDrivenAnimation()
                 // else: still decoding — startDecoding() will call startAudioDrivenAnimation() when ready
-            } else {
+            } else if (sessionReady) {
+                // Only cancel animation on a real pause/stop, not on the spurious
+                // isPlaying=false that media3 delivers when a new listener is registered
+                // while the previous session's ExoPlayer is still in STATE_ENDED.
                 animationJob?.cancel()
             }
         }
         override fun onPlaybackStateChanged(state: Int) {
             when (state) {
                 Player.STATE_READY -> {
+                    sessionReady = true
                     _uiState.value = _uiState.value.copy(
                         durationMs = controller?.duration?.takeIf { it > 0 }
                             ?: _uiState.value.durationMs
@@ -132,8 +162,11 @@ class PlayerViewModel : ViewModel() {
                     startProgressTracking()
                 }
                 Player.STATE_ENDED -> {
+                    if (!sessionReady) return  // Stale ENDED from previous session — ignore.
+                    sessionReady = false
                     animationJob?.cancel()
                     _uiState.value = _uiState.value.copy(
+                        meditation    = null,
                         isPlaying     = false,
                         playbackEnded = true
                     )
@@ -226,8 +259,10 @@ class PlayerViewModel : ViewModel() {
         }
     }
 
-    fun startBreathingIfIdle() {
-        if (!_uiState.value.isPlaying) startBreathingAnimation()
+    fun stopPlayback() {
+        animationJob?.cancel()
+        progressJob?.cancel()
+        controller?.stop()  // reset ExoPlayer to IDLE so next session starts clean
     }
 
     override fun onCleared() {

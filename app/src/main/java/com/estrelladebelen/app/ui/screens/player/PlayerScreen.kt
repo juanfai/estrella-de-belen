@@ -50,14 +50,9 @@ fun PlayerScreen(
         onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
 
-    // Load meditation
+    // Load meditation — breathing animation is started inside loadMeditation()
     LaunchedEffect(meditationId) {
         viewModel.loadMeditation(context, meditationId)
-    }
-
-    // Start breathing animation when screen first opens (before audio starts)
-    LaunchedEffect(Unit) {
-        viewModel.startBreathingIfIdle()
     }
 
     // Navigate back when audio ends
@@ -73,19 +68,25 @@ fun PlayerScreen(
         }
     }
 
-    // Drive the glow renderer from ViewModel state
-    LaunchedEffect(uiState.glowAmplitude, uiState.haloAmplitude) {
-        glowRenderer.drawFrame(
-            uiState.glowAmplitude,
-            uiState.haloAmplitude,
-            uiState.stretchY,
-            uiState.glowColor,
-            uiState.haloColor
-        )
+    // Continuous rendering loop — collects directly from StateFlow so it never
+    // misses a frame regardless of Compose recomposition batching.
+    LaunchedEffect(glowRenderer) {
+        viewModel.uiState.collect { state ->
+            glowRenderer.drawFrame(
+                state.glowAmplitude,
+                state.haloAmplitude,
+                state.stretchY,
+                state.glowColor,
+                state.haloColor
+            )
+        }
     }
 
     DisposableEffect(Unit) {
-        onDispose { glowRenderer.release() }
+        onDispose {
+            viewModel.stopPlayback()
+            glowRenderer.release()
+        }
     }
 
     Box(

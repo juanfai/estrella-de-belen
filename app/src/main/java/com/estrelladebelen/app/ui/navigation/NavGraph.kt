@@ -1,6 +1,5 @@
 package com.estrelladebelen.app.ui.navigation
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -8,7 +7,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -17,7 +15,6 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import com.estrelladebelen.app.R
-import com.estrelladebelen.app.ui.components.MiniPlayer
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.estrelladebelen.app.ui.screens.SplashScreen
@@ -30,7 +27,6 @@ import com.estrelladebelen.app.ui.screens.profile.DownloadsScreen
 import com.estrelladebelen.app.ui.screens.profile.FavoritesScreen
 import com.estrelladebelen.app.ui.screens.profile.ProfileScreen
 import com.estrelladebelen.app.ui.screens.profile.ProfileViewModel
-import com.estrelladebelen.app.ui.theme.LavenderBackground
 
 private val bottomNavItems = listOf(
     Screen.Home    to (R.string.nav_home    to Icons.Filled.Home),
@@ -41,18 +37,15 @@ private val bottomNavItems = listOf(
 fun AppNavGraph() {
     val navController = rememberNavController()
 
-    // Shared ViewModels scoped to the NavGraph
-    val playerViewModel: PlayerViewModel     = viewModel()
-    val profileViewModel: ProfileViewModel   = viewModel()
+    val playerViewModel: PlayerViewModel   = viewModel()
+    val profileViewModel: ProfileViewModel = viewModel()
 
-    val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val userProfile by profileViewModel.userProfile.collectAsStateWithLifecycle()
 
     val currentBackStack by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStack?.destination?.route
 
     val showBottomBar = currentRoute in listOf(Screen.Home.route, Screen.Profile.route)
-    val showMiniPlayer = playerState.meditation != null && currentRoute != Screen.Player.route
 
     Scaffold(
         bottomBar = {
@@ -73,8 +66,8 @@ fun AppNavGraph() {
                             icon = { Icon(icon, contentDescription = stringResource(labelRes)) },
                             label = { Text(stringResource(labelRes)) },
                             colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer,
-                                selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.onTertiaryContainer
+                                indicatorColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                selectedIconColor = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                         )
                     }
@@ -82,15 +75,12 @@ fun AppNavGraph() {
             }
         }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
         NavHost(
             navController = navController,
             startDestination = Screen.Splash.route,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
             composable(Screen.Splash.route) {
                 SplashScreen(
@@ -180,20 +170,5 @@ fun AppNavGraph() {
                 )
             }
         }
-
-        // Mini-player floating above bottom nav (shown when audio is active outside PlayerScreen)
-        if (showMiniPlayer && showBottomBar) {
-            MiniPlayer(
-                state = playerState,
-                onPlayerClick = {
-                    playerState.meditation?.let { m ->
-                        navController.navigate(Screen.Player.createRoute(m.id))
-                    }
-                },
-                onTogglePlayPause = playerViewModel::togglePlayPause,
-                modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter)
-            )
-        }
-        } // end Box
     }
 }
