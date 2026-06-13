@@ -41,6 +41,10 @@
     <string name="downloads_empty_title">Sin descargas</string>
     <string name="downloads_empty_subtitle">Descargá meditaciones para escucharlas sin conexión</string>
 
+    <!-- Favorites -->
+    <string name="favorites_empty_title">Sin favoritas</string>
+    <string name="favorites_empty_subtitle">Tocá el ♡ en cualquier meditación para guardarla acá</string>
+
     <!-- Navigation -->
     <string name="nav_home">Inicio</string>
     <string name="nav_profile">Perfil</string>

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,7 +33,9 @@ import kotlinx.coroutines.delay
 fun PlayerScreen(
     meditationId: String,
     onBack: () -> Unit,
-    viewModel: PlayerViewModel
+    viewModel: PlayerViewModel,
+    isFavorite: Boolean = false,
+    onFavoriteToggle: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -112,10 +115,12 @@ fun PlayerScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             PlayerControls(
-                uiState = uiState,
-                onBack = onBack,
+                uiState           = uiState,
+                isFavorite        = isFavorite,
+                onBack            = onBack,
                 onTogglePlayPause = viewModel::togglePlayPause,
-                onSeek = viewModel::seekTo
+                onSeek            = viewModel::seekTo,
+                onFavoriteToggle  = onFavoriteToggle
             )
         }
     }
@@ -124,9 +129,11 @@ fun PlayerScreen(
 @Composable
 private fun PlayerControls(
     uiState: PlayerUiState,
+    isFavorite: Boolean,
     onBack: () -> Unit,
     onTogglePlayPause: () -> Unit,
-    onSeek: (Float) -> Unit
+    onSeek: (Float) -> Unit,
+    onFavoriteToggle: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -145,6 +152,21 @@ private fun PlayerControls(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.action_back),
                 tint = Color.White
+            )
+        }
+
+        // Favorite button
+        IconButton(
+            onClick = onFavoriteToggle,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                contentDescription = stringResource(R.string.action_favorite),
+                tint = if (isFavorite) Color(0xFFFF6B8A) else Color.White,
+                modifier = Modifier.size(24.dp)
             )
         }
 

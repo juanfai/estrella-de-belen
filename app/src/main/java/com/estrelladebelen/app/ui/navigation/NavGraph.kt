@@ -27,6 +27,7 @@ import com.estrelladebelen.app.ui.screens.home.HomeScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerViewModel
 import com.estrelladebelen.app.ui.screens.profile.DownloadsScreen
+import com.estrelladebelen.app.ui.screens.profile.FavoritesScreen
 import com.estrelladebelen.app.ui.screens.profile.ProfileScreen
 import com.estrelladebelen.app.ui.screens.profile.ProfileViewModel
 import com.estrelladebelen.app.ui.theme.LavenderBackground
@@ -134,16 +135,19 @@ fun AppNavGraph() {
                     onMeditationClick = { id ->
                         navController.navigate(Screen.Player.createRoute(id))
                     },
-                    onFavoriteClick = { /* TODO: toggle via ProfileViewModel */ }
+                    onFavoriteClick = { id -> profileViewModel.toggleFavorite(id) }
                 )
             }
 
             composable(Screen.Player.route) { backStack ->
                 val meditationId = backStack.arguments?.getString("meditationId") ?: return@composable
+                val isFavorite = meditationId in (userProfile?.favorites ?: emptyList())
                 PlayerScreen(
-                    meditationId = meditationId,
-                    onBack = { navController.popBackStack() },
-                    viewModel = playerViewModel
+                    meditationId     = meditationId,
+                    onBack           = { navController.popBackStack() },
+                    viewModel        = playerViewModel,
+                    isFavorite       = isFavorite,
+                    onFavoriteToggle = { profileViewModel.toggleFavorite(meditationId) }
                 )
             }
 
@@ -154,20 +158,25 @@ fun AppNavGraph() {
                             popUpTo(0) { inclusive = true }
                         }
                     },
-                    onDownloadsClick = {
-                        navController.navigate(Screen.Downloads.route)
-                    },
+                    onFavoritesClick = { navController.navigate(Screen.Favorites.route) },
+                    onDownloadsClick = { navController.navigate(Screen.Downloads.route) },
                     viewModel = profileViewModel
+                )
+            }
+
+            composable(Screen.Favorites.route) {
+                FavoritesScreen(
+                    onBack      = { navController.popBackStack() },
+                    onPlayClick = { id -> navController.navigate(Screen.Player.createRoute(id)) },
+                    viewModel   = profileViewModel
                 )
             }
 
             composable(Screen.Downloads.route) {
                 DownloadsScreen(
-                    onBack = { navController.popBackStack() },
-                    onPlayClick = { meditationId ->
-                        navController.navigate(Screen.Player.createRoute(meditationId))
-                    },
-                    viewModel = profileViewModel
+                    onBack      = { navController.popBackStack() },
+                    onPlayClick = { id -> navController.navigate(Screen.Player.createRoute(id)) },
+                    viewModel   = profileViewModel
                 )
             }
         }

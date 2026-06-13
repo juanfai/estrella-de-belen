@@ -4,12 +4,15 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.estrelladebelen.app.data.local.entity.DownloadedMeditation
+import com.estrelladebelen.app.data.model.Meditation
 import com.estrelladebelen.app.data.model.UserProfile
 import com.estrelladebelen.app.data.repository.AppContainer
 import com.estrelladebelen.app.data.repository.MeditationRepository
 import com.estrelladebelen.app.data.repository.UserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -31,6 +34,20 @@ class ProfileViewModel : ViewModel() {
         SharingStarted.WhileSubscribed(5_000),
         emptyList()
     )
+
+    // All meditations fetched once; combined reactively with the favorites list from Firestore.
+    private val allMeditations = flow {
+        emit(runCatching { meditationRepo.getAll() }.getOrDefault(emptyList()))
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val favoriteMeditations = combine(userProfile, allMeditations) { profile, all ->
+        val ids = profile?.favorites ?: emptyList()
+        all.filter { it.id in ids }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun toggleFavorite(meditationId: String) {
+        viewModelScope.launch { userRepo.toggleFavorite(meditationId) }
+    }
 
     fun signOut(onDone: () -> Unit) {
         viewModelScope.launch {
