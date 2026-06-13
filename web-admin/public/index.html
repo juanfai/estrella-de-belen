@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Estrella de Belén — Admin</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── LOGIN ─────────────────────────────────────────────────────────── -->
+  <div id="login-view" class="view center">
+    <div class="login-card">
+      <div class="star">✦</div>
+      <h1>Estrella de Belén</h1>
+      <p class="subtitle">Panel de administración</p>
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input id="login-email" type="email" placeholder="admin@ejemplo.com" />
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input id="login-password" type="password" placeholder="••••••••" />
+      </div>
+      <div id="login-error" class="error-msg hidden"></div>
+      <button id="login-btn" class="btn-primary full-width">Ingresar</button>
+    </div>
+  </div>
+
+  <!-- ── ADMIN ─────────────────────────────────────────────────────────── -->
+  <div id="admin-view" class="view hidden">
+
+    <header>
+      <div class="header-inner">
+        <span class="header-title">✦ Admin</span>
+        <div class="header-right">
+          <span id="admin-email" class="admin-email"></span>
+          <button id="logout-btn" class="btn-ghost">Salir</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="toolbar">
+        <h2>Meditaciones</h2>
+        <button id="new-btn" class="btn-primary">+ Nueva meditación</button>
+      </div>
+
+      <div id="meditation-list" class="card-grid">
+        <div class="loading">Cargando...</div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ── MODAL: FORM ────────────────────────────────────────────────────── -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Nueva meditación</h3>
+        <button id="modal-close" class="btn-icon">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Título *</label>
+            <input id="f-title" type="text" placeholder="Paz interior" />
+          </div>
+          <div class="form-group">
+            <label>Categoría</label>
+            <input id="f-category" type="text" placeholder="paz, sueño, concentración..." />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea id="f-description" rows="3" placeholder="Una breve descripción de la meditación..."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Duración (segundos)</label>
+            <input id="f-duration" type="number" placeholder="Se detecta del audio" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Orden en el catálogo</label>
+            <input id="f-order" type="number" placeholder="1" min="1" />
+          </div>
+        </div>
+
+        <!-- Color de halo -->
+        <div class="form-group">
+          <label>Color de halo</label>
+          <div class="color-row">
+            <div class="color-swatches">
+              <button class="swatch" data-color="#7C3AED" style="background:#7C3AED" title="Violeta"></button>
+              <button class="swatch" data-color="#9890B8" style="background:#9890B8" title="Lila"></button>
+              <button class="swatch" data-color="#3B82F6" style="background:#3B82F6" title="Azul"></button>
+              <button class="swatch" data-color="#06B6D4" style="background:#06B6D4" title="Celeste"></button>
+              <button class="swatch" data-color="#B2D4BA" style="background:#B2D4BA" title="Menta"></button>
+              <button class="swatch" data-color="#10B981" style="background:#10B981" title="Verde"></button>
+              <button class="swatch" data-color="#C9B97A" style="background:#C9B97A" title="Dorado"></button>
+              <button class="swatch" data-color="#F97316" style="background:#F97316" title="Naranja"></button>
+              <button class="swatch" data-color="#F43F5E" style="background:#F43F5E" title="Rosa"></button>
+            </div>
+            <div class="color-custom">
+              <input id="f-halo-color" type="color" value="#9890B8" />
+              <span id="halo-hex">#9890B8</span>
+            </div>
+          </div>
+          <div id="halo-preview" class="halo-preview"></div>
+        </div>
+
+        <!-- Imagen -->
+        <div class="form-group">
+          <label>Imagen / thumbnail</label>
+          <div id="image-drop" class="drop-zone" data-type="image">
+            <input id="f-image" type="file" accept="image/*" class="drop-input" />
+            <div class="drop-label">
+              <span class="drop-icon">🖼</span>
+              <span>Arrastrá la imagen o hacé click</span>
+            </div>
+            <img id="image-preview" class="file-preview hidden" alt="preview" />
+          </div>
+          <div id="image-progress" class="progress hidden">
+            <div class="progress-bar"></div>
+            <span class="progress-text">0%</span>
+          </div>
+          <div id="image-url-display" class="url-display hidden"></div>
+        </div>
+
+        <!-- Audio -->
+        <div class="form-group">
+          <label>Archivo de audio *</label>
+          <div id="audio-drop" class="drop-zone" data-type="audio">
+            <input id="f-audio" type="file" accept="audio/*" class="drop-input" />
+            <div class="drop-label">
+              <span class="drop-icon">🎵</span>
+              <span>Arrastrá el audio o hacé click</span>
+            </div>
+            <span id="audio-filename" class="file-name hidden"></span>
+          </div>
+          <div id="audio-progress" class="progress hidden">
+            <div class="progress-bar"></div>
+            <span class="progress-text">0%</span>
+          </div>
+          <div id="audio-url-display" class="url-display hidden"></div>
+        </div>
+
+        <div id="form-error" class="error-msg hidden"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="cancel-btn" class="btn-ghost">Cancelar</button>
+        <button id="save-btn" class="btn-primary">
+          <span id="save-text">Publicar meditación</span>
+          <span id="save-spinner" class="spinner hidden"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL: CONFIRM DELETE ─────────────────────────────────────────── -->
+  <div id="delete-overlay" class="modal-overlay hidden">
+    <div class="modal small">
+      <div class="modal-header">
+        <h3>Eliminar meditación</h3>
+      </div>
+      <div class="modal-body">
+        <p>¿Estás seguro que querés eliminar <strong id="delete-name"></strong>? Esta acción no se puede deshacer.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="delete-cancel" class="btn-ghost">Cancelar</button>
+        <button id="delete-confirm" class="btn-danger">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
