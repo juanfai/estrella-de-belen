@@ -1,6 +1,7 @@
 package com.estrelladebelen.app.ui.screens.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -9,16 +10,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.estrelladebelen.app.R
 import com.estrelladebelen.app.data.model.Meditation
 import com.estrelladebelen.app.ui.components.MeditationCard
-import com.estrelladebelen.app.ui.theme.*
 import java.util.Calendar
 
 @Composable
@@ -35,31 +38,29 @@ fun HomeScreen(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        contentPadding = PaddingValues(bottom = 16.dp),
+        contentPadding = PaddingValues(bottom = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier
             .fillMaxSize()
-            .background(LavenderBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // Header
         item(span = { GridItemSpan(2) }) {
-            Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp)) {
+            Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 4.dp)) {
                 Text(
                     text = greeting(userName),
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Light,
-                    color = PurpleTextPrimary
+                    fontWeight = FontWeight.Normal,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = stringResource(R.string.home_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = LavenderTextSecond
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        // Featured meditation
         uiState.featured?.let { featured ->
             item(span = { GridItemSpan(2) }) {
                 FeaturedCard(
@@ -70,7 +71,6 @@ fun HomeScreen(
             }
         }
 
-        // Duration filter chips
         item(span = { GridItemSpan(2) }) {
             DurationFilterRow(
                 activeFilter = uiState.activeFilter,
@@ -82,7 +82,7 @@ fun HomeScreen(
         if (uiState.isLoading) {
             item(span = { GridItemSpan(2) }) {
                 Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = LavenderPrimary)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             }
         } else {
@@ -90,10 +90,10 @@ fun HomeScreen(
                 val paddingStart = if (index % 2 == 0) 20.dp else 0.dp
                 val paddingEnd   = if (index % 2 != 0) 20.dp else 0.dp
                 MeditationCard(
-                    meditation    = meditation,
-                    isFavorite    = meditation.id in favorites,
-                    isDownloaded  = meditation.id in downloads,
-                    onClick       = { onMeditationClick(meditation.id) },
+                    meditation      = meditation,
+                    isFavorite      = meditation.id in favorites,
+                    isDownloaded    = meditation.id in downloads,
+                    onClick         = { onMeditationClick(meditation.id) },
                     onFavoriteClick = { onFavoriteClick(meditation.id) },
                     onDownloadClick = { onDownloadClick(meditation.id) },
                     modifier = Modifier.padding(start = paddingStart, end = paddingEnd)
@@ -105,43 +105,59 @@ fun HomeScreen(
 
 @Composable
 private fun FeaturedCard(meditation: Meditation, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val haloColor = runCatching { android.graphics.Color.parseColor(meditation.haloColor) }.getOrDefault(0xFF5E1FFF.toInt())
-
+    val shape = RoundedCornerShape(20.dp)
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(140.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth().height(180.dp),
+        shape = shape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        )
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            Color(haloColor).copy(alpha = 0.85f),
-                            Color.White.copy(alpha = 0.5f)
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (meditation.imageUrl.isNotBlank()) {
+                AsyncImage(
+                    model = meditation.imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            // Gradient scrim for readability
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
                         )
                     )
-                )
-                .padding(20.dp)
-        ) {
-            Column {
-                Text(
-                    text = stringResource(R.string.home_featured_label),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.8f)
-                )
-                Spacer(Modifier.height(6.dp))
+            )
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.home_featured_label),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = meditation.title,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Medium,
                     color = Color.White
                 )
-                Spacer(Modifier.weight(1f))
                 Text(
                     text = stringResource(R.string.card_duration, meditation.durationMinutes),
                     style = MaterialTheme.typography.bodySmall,
@@ -163,18 +179,19 @@ private fun DurationFilterRow(
         modifier = modifier.padding(vertical = 8.dp)
     ) {
         DurationFilter.entries.forEach { filter ->
+            val selected = activeFilter == filter
             FilterChip(
-                selected = activeFilter == filter,
+                selected = selected,
                 onClick = { onFilterSelected(filter) },
                 label = {
                     Text(
                         text = stringResource(filter.labelRes()),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.labelMedium
                     )
                 },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = LavenderPrimary,
-                    selectedLabelColor = Color.White
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
         }

@@ -86,6 +86,9 @@ dependencies {
     // Coil
     implementation(libs.coil.compose)
 
+    // Google Fonts
+    implementation("androidx.compose.ui:ui-text-google-fonts")
+
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)

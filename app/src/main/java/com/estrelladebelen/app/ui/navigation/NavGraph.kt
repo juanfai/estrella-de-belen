@@ -18,6 +18,8 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import com.estrelladebelen.app.R
 import com.estrelladebelen.app.ui.components.MiniPlayer
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import com.estrelladebelen.app.ui.screens.SplashScreen
 import com.estrelladebelen.app.ui.screens.auth.LoginScreen
 import com.estrelladebelen.app.ui.screens.auth.RegisterScreen
@@ -88,7 +90,11 @@ fun AppNavGraph() {
             composable(Screen.Splash.route) {
                 SplashScreen(
                     onReady = {
-                        navController.navigate(Screen.Login.route) {
+                        val destination = if (Firebase.auth.currentUser != null)
+                            Screen.Home.route
+                        else
+                            Screen.Login.route
+                        navController.navigate(destination) {
                             popUpTo(Screen.Splash.route) { inclusive = true }
                         }
                     }

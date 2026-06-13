@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.estrelladebelen.app.data.local.dao.MeditationDao
 import com.estrelladebelen.app.data.local.entity.DownloadedMeditation
 
-@Database(entities = [DownloadedMeditation::class], version = 1, exportSchema = false)
+@Database(entities = [DownloadedMeditation::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun meditationDao(): MeditationDao
 
@@ -20,7 +20,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "estrella_db"
-                ).build().also { instance = it }
+                ).fallbackToDestructiveMigration().build().also { instance = it }
             }
     }
 }

@@ -6,8 +6,8 @@ data class Meditation(
     val description: String = "",
     val durationSeconds: Int = 0,
     val audioUrl: String = "",
-    val glowColor: String = "#d9abff",
-    val haloColor: String = "#5e1fff",
+    val imageUrl: String = "",
+    val haloColor: String = "#9890B8",
     val category: String = "",
     val order: Int = 0,
     val createdAt: Long = 0L

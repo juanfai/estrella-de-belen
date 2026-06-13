@@ -7,7 +7,7 @@ object VisualConfig {
     // Glow is always white. Halo is chosen per meditation.
     val GLOW_COLOR         = hex("#ffffff")
     val DEFAULT_HALO_COLOR = hex("#9890B8")  // Lilac
-    val BG_COLOR           = hex("#3A3F68")  // Midnight
+    val BG_COLOR           = hex("#101417")  // backgroundDark
 
     const val SENSITIVITY        = 1.8f
     const val GLOW_BRIGHTNESS    = 0.72f

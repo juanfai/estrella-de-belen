@@ -38,7 +38,6 @@ class FirebaseMeditationRepository(
                 title         = meditation.title,
                 durationSeconds = meditation.durationSeconds,
                 localFilePath = localPath,
-                glowColor     = meditation.glowColor,
                 haloColor     = meditation.haloColor
             )
         )
@@ -56,8 +55,8 @@ class FirebaseMeditationRepository(
             description     = getString("description") ?: "",
             durationSeconds = getLong("durationSeconds")?.toInt() ?: 0,
             audioUrl        = getString("audioUrl") ?: "",
-            glowColor       = getString("glowColor") ?: "#d9abff",
-            haloColor       = getString("haloColor") ?: "#5e1fff",
+            imageUrl        = getString("imageUrl") ?: "",
+            haloColor       = getString("haloColor") ?: "#9890B8",
             category        = getString("category") ?: "",
             order           = getLong("order")?.toInt() ?: 0,
             createdAt       = getTimestamp("createdAt")?.toDate()?.time ?: 0L

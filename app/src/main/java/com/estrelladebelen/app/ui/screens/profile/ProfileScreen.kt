@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.estrelladebelen.app.R
-import com.estrelladebelen.app.ui.theme.*
+import com.estrelladebelen.app.ui.theme.Moonbeam
 
 @Composable
 fun ProfileScreen(
@@ -32,7 +32,7 @@ fun ProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LavenderBackground)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
     ) {
@@ -40,31 +40,43 @@ fun ProfileScreen(
 
         // Avatar + name
         Row(verticalAlignment = Alignment.CenterVertically) {
-            UserAvatar(name = user?.displayName ?: "")
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = user?.displayName?.firstOrNull()?.uppercase() ?: "?",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Medium
+                )
+            }
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(
                     text = user?.displayName ?: "",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
-                    color = PurpleTextPrimary
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = user?.email ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LavenderTextSecond
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
         Spacer(Modifier.height(28.dp))
 
-        // Stats
         SectionLabel(stringResource(R.string.profile_stats))
         Spacer(Modifier.height(10.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             StatCard(
                 value = "${user?.totalSessions ?: 0}",
@@ -72,7 +84,7 @@ fun ProfileScreen(
                 modifier = Modifier.weight(1f)
             )
             StatCard(
-                value = "${user?.totalMinutes ?: 0} min",
+                value = "${user?.totalMinutes ?: 0}",
                 label = stringResource(R.string.profile_time),
                 modifier = Modifier.weight(1f)
             )
@@ -85,17 +97,15 @@ fun ProfileScreen(
 
         Spacer(Modifier.height(28.dp))
 
-        // Library actions
         SectionLabel(stringResource(R.string.profile_library))
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
         ProfileActionRow(icon = Icons.Filled.Favorite, label = stringResource(R.string.profile_favorites)) {}
         ProfileActionRow(icon = Icons.Filled.Download, label = stringResource(R.string.profile_downloads)) {}
 
         Spacer(Modifier.height(28.dp))
 
-        // Settings
         SectionLabel(stringResource(R.string.profile_settings))
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
 
         var notificationsOn by remember { mutableStateOf(user?.notificationsEnabled ?: false) }
         LaunchedEffect(user) { notificationsOn = user?.notificationsEnabled ?: false }
@@ -121,7 +131,12 @@ fun ProfileScreen(
         OutlinedButton(
             onClick = { viewModel.signOut(onSignOut) },
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = LavenderPrimaryDark)
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error
+            ),
+            border = ButtonDefaults.outlinedButtonBorder.copy(
+                // tint border with error color
+            )
         ) {
             Text(stringResource(R.string.profile_sign_out))
         }
@@ -131,30 +146,13 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun UserAvatar(name: String) {
-    Box(
-        modifier = Modifier
-            .size(60.dp)
-            .clip(CircleShape)
-            .background(LavenderContainer),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = name.firstOrNull()?.uppercase() ?: "?",
-            style = MaterialTheme.typography.titleLarge,
-            color = LavenderPrimaryDark,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
 private fun StatCard(value: String, label: String, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = LavenderSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -164,13 +162,13 @@ private fun StatCard(value: String, label: String, modifier: Modifier = Modifier
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = LavenderPrimaryDark
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = LavenderTextSecond
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -179,9 +177,10 @@ private fun StatCard(value: String, label: String, modifier: Modifier = Modifier
 @Composable
 private fun SectionLabel(text: String) {
     Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        color = LavenderTextSecond
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        letterSpacing = androidx.compose.ui.unit.TextUnit(1.5f, androidx.compose.ui.unit.TextUnitType.Sp)
     )
 }
 
@@ -196,21 +195,40 @@ private fun ProfileActionRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = LavenderSurface,
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
         onClick = onClick
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = LavenderPrimary, modifier = Modifier.size(20.dp))
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
             Spacer(Modifier.width(14.dp))
-            Text(label, style = MaterialTheme.typography.bodyMedium, color = PurpleTextPrimary, modifier = Modifier.weight(1f))
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
             if (trailingLabel != null) {
-                Text(trailingLabel, style = MaterialTheme.typography.bodySmall, color = LavenderTextSecond)
+                Text(
+                    trailingLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             } else {
-                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = LavenderTextSecond, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Filled.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -227,21 +245,27 @@ private fun ProfileToggleRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = LavenderSurface
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = LavenderPrimary, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(14.dp))
-            Text(label, style = MaterialTheme.typography.bodyMedium, color = PurpleTextPrimary, modifier = Modifier.weight(1f))
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(checkedThumbColor = LavenderPrimaryDark, checkedTrackColor = LavenderContainer)
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
             )
+            Spacer(Modifier.width(14.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
         }
     }
 }

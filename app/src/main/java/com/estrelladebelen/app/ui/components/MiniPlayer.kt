@@ -15,16 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.estrelladebelen.app.R
 import com.estrelladebelen.app.ui.screens.player.PlayerUiState
-import com.estrelladebelen.app.ui.theme.LavenderPrimary
-import com.estrelladebelen.app.ui.theme.LavenderSurface
-import com.estrelladebelen.app.ui.theme.PurpleTextPrimary
 
 @Composable
 fun MiniPlayer(
@@ -39,46 +35,45 @@ fun MiniPlayer(
         exit  = slideOutVertically { it },
         modifier = modifier
     ) {
+        val shape = RoundedCornerShape(12.dp)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 6.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(LavenderSurface)
+                .clip(shape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .clickable(onClick = onPlayerClick)
         ) {
-            // Progress bar behind content
             if (state.progressFraction > 0f) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(state.progressFraction)
                         .height(56.dp)
-                        .background(LavenderPrimary.copy(alpha = 0.12f))
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
                 )
             }
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = state.meditation?.title ?: "",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Medium,
-                        color = PurpleTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = stringResource(R.string.player_now_playing),
                         style = MaterialTheme.typography.bodySmall,
-                        color = PurpleTextPrimary.copy(alpha = 0.55f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
                 IconButton(onClick = onTogglePlayPause) {
                     Icon(
                         imageVector = if (state.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
@@ -86,7 +81,7 @@ fun MiniPlayer(
                             stringResource(R.string.player_pause)
                         else
                             stringResource(R.string.player_play),
-                        tint = LavenderPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(28.dp)
                     )
                 }

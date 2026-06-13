@@ -1,9 +1,9 @@
 package com.estrelladebelen.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
@@ -15,16 +15,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.estrelladebelen.app.R
 import com.estrelladebelen.app.data.model.Meditation
-import com.estrelladebelen.app.ui.theme.LavenderSurface
-import com.estrelladebelen.app.ui.theme.LavenderTextSecond
+import com.estrelladebelen.app.ui.theme.Moonbeam
 
 @Composable
 fun MeditationCard(
@@ -36,98 +34,107 @@ fun MeditationCard(
     onDownloadClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val haloInt     = runCatching { android.graphics.Color.parseColor(meditation.haloColor) }.getOrDefault(0xFF5E1FFF.toInt())
-    val glowCompose = Color.White.copy(alpha = 0.85f)
-    val haloCompose = Color(haloInt).copy(alpha = 0.9f)
+    val shape = RoundedCornerShape(16.dp)
 
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = LavenderSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = shape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-
-            // Glow color preview circle
+        Column {
+            // Thumbnail
             Box(
                 modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(listOf(glowCompose, haloCompose))
+                    .fillMaxWidth()
+                    .height(130.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            ) {
+                if (meditation.imageUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = meditation.imageUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
-            )
+                }
 
-            Spacer(Modifier.height(12.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = meditation.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f)
-                )
                 if (meditation.isNew) {
-                    NewBadge()
+                    Surface(
+                        shape = RoundedCornerShape(bottomEnd = 10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.align(Alignment.TopStart)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.badge_new),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
-
-            Text(
-                text = stringResource(R.string.card_duration, meditation.durationMinutes),
-                style = MaterialTheme.typography.bodySmall,
-                color = LavenderTextSecond
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                IconButton(
-                    onClick = onFavoriteClick,
-                    modifier = Modifier.size(32.dp)
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = meditation.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = stringResource(R.string.action_favorite),
-                        tint = if (isFavorite) Color(haloInt) else LavenderTextSecond,
-                        modifier = Modifier.size(20.dp)
+                    if (meditation.category.isNotBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Text(
+                                text = meditation.category,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = stringResource(R.string.card_duration, meditation.durationMinutes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Spacer(Modifier.width(4.dp))
-                IconButton(
-                    onClick = onDownloadClick,
-                    modifier = Modifier.size(32.dp)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    Icon(
-                        imageVector = if (isDownloaded) Icons.Filled.DownloadDone else Icons.Filled.Download,
-                        contentDescription = stringResource(R.string.action_download),
-                        tint = if (isDownloaded) Color(haloInt) else LavenderTextSecond,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    IconButton(onClick = onFavoriteClick, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = stringResource(R.string.action_favorite),
+                            tint = if (isFavorite) Moonbeam else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(onClick = onDownloadClick, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            imageVector = if (isDownloaded) Icons.Filled.DownloadDone else Icons.Filled.Download,
+                            contentDescription = stringResource(R.string.action_download),
+                            tint = if (isDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun NewBadge() {
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        modifier = Modifier.padding(start = 6.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.badge_new),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-        )
     }
 }

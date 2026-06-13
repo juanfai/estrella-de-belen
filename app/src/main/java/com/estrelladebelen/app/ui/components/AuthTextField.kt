@@ -3,14 +3,10 @@ package com.estrelladebelen.app.ui.components
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.VisualTransformation
-import com.estrelladebelen.app.ui.theme.AuthPrimary
-import com.estrelladebelen.app.ui.theme.Cream
 
 @Composable
 fun AuthTextField(
@@ -26,21 +22,12 @@ fun AuthTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, color = Cream.copy(alpha = 0.6f)) },
+        label = { Text(label) },
         visualTransformation = visualTransformation,
         trailingIcon = trailingIcon,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
         singleLine = true,
-        modifier = modifier,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White,
-            focusedBorderColor = AuthPrimary,
-            unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
-            cursorColor = AuthPrimary,
-            focusedTrailingIconColor = Color.White.copy(alpha = 0.6f),
-            unfocusedTrailingIconColor = Color.White.copy(alpha = 0.4f)
-        )
+        modifier = modifier
     )
 }
