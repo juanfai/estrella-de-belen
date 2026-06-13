@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Iluminador de Audio"
+rootProject.name = "Estrella de Belen"
 include(":app")
  

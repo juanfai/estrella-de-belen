@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.IluminadorDeAudio" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+    <style name="Theme.EstrellaDeBelen" parent="Theme.Material3.DayNight.NoActionBar" />
 </resources>

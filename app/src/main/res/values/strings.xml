@@ -1,3 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Iluminador de Audio</string>
+    <string name="app_name">Estrella de Belén</string>
+    <string name="splash_tagline">Meditaciones guiadas</string>
+
+    <!-- Auth -->
+    <string name="auth_sign_in">Iniciar sesión</string>
+    <string name="auth_register">Registrarse</string>
+    <string name="auth_create_account">Crear cuenta</string>
+    <string name="auth_email">Correo electrónico</string>
+    <string name="auth_password">Contraseña</string>
+    <string name="auth_confirm_password">Confirmar contraseña</string>
+    <string name="auth_name">Nombre</string>
+    <string name="auth_no_account">¿No tenés cuenta?</string>
+    <string name="auth_already_have_account">¿Ya tenés cuenta?</string>
+
+    <!-- Home -->
+    <string name="home_subtitle">¿Qué necesitás hoy?</string>
+    <string name="home_featured_label">✦  Meditación del día</string>
+    <string name="filter_all">Todas</string>
+    <string name="filter_5min">5 min</string>
+    <string name="filter_10min">10 min</string>
+    <string name="filter_20min">20+ min</string>
+
+    <!-- Card -->
+    <string name="card_duration">%d min</string>
+    <string name="badge_new">Nuevo</string>
+
+    <!-- Player -->
+    <string name="player_play">Reproducir</string>
+    <string name="player_pause">Pausar</string>
+    <string name="player_now_playing">Reproduciendo ahora</string>
+
+    <!-- Actions -->
+    <string name="action_favorite">Favorito</string>
+    <string name="action_download">Descargar</string>
+    <string name="action_back">Volver</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Inicio</string>
+    <string name="nav_profile">Perfil</string>
+
+    <!-- Profile -->
+    <string name="profile_stats">Mis estadísticas</string>
+    <string name="profile_sessions">Sesiones</string>
+    <string name="profile_time">Tiempo</string>
+    <string name="profile_streak">Racha</string>
+    <string name="profile_library">Mi biblioteca</string>
+    <string name="profile_favorites">Favoritas</string>
+    <string name="profile_downloads">Descargadas</string>
+    <string name="profile_settings">Ajustes</string>
+    <string name="profile_sign_out">Cerrar sesión</string>
+
+    <!-- Settings -->
+    <string name="settings_notifications">Recordatorio diario</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_soon">Próximamente</string>
+    <string name="settings_about">Acerca de la app</string>
 </resources>
