@@ -24,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.estrelladebelen.app.R
 import com.estrelladebelen.app.data.model.Meditation
 import com.estrelladebelen.app.render.VisualConfig
+import com.estrelladebelen.app.ui.theme.Moonbeam
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -156,7 +157,7 @@ private fun FavoriteItem(
                 Icon(
                     Icons.Filled.Favorite,
                     contentDescription = stringResource(R.string.action_favorite),
-                    tint = MaterialTheme.colorScheme.error,
+                    tint = Moonbeam,
                     modifier = Modifier.size(20.dp)
                 )
             }
