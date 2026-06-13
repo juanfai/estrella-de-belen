@@ -55,9 +55,12 @@ fun PlayerScreen(
         viewModel.loadMeditation(context, meditationId)
     }
 
-    // Navigate back when audio ends
+    // Navigate back when audio ends — delay matches the exit fade duration
     LaunchedEffect(uiState.playbackEnded) {
-        if (uiState.playbackEnded) onBack()
+        if (uiState.playbackEnded) {
+            delay(800)
+            onBack()
+        }
     }
 
     // Auto-hide controls after 3 seconds

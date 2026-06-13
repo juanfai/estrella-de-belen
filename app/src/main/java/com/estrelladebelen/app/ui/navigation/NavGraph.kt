@@ -1,5 +1,8 @@
 package com.estrelladebelen.app.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -80,7 +83,11 @@ fun AppNavGraph() {
             startDestination = Screen.Splash.route,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(innerPadding),
+            enterTransition    = { fadeIn(tween(300)) },
+            exitTransition     = { fadeOut(tween(300)) },
+            popEnterTransition = { fadeIn(tween(300)) },
+            popExitTransition  = { fadeOut(tween(300)) }
         ) {
             composable(Screen.Splash.route) {
                 SplashScreen(
@@ -129,7 +136,13 @@ fun AppNavGraph() {
                 )
             }
 
-            composable(Screen.Player.route) { backStack ->
+            composable(
+                Screen.Player.route,
+                enterTransition    = { fadeIn(tween(600)) },
+                exitTransition     = { fadeOut(tween(800)) },
+                popEnterTransition = { fadeIn(tween(600)) },
+                popExitTransition  = { fadeOut(tween(800)) }
+            ) { backStack ->
                 val meditationId = backStack.arguments?.getString("meditationId") ?: return@composable
                 val isFavorite = meditationId in (userProfile?.favorites ?: emptyList())
                 PlayerScreen(

@@ -244,7 +244,7 @@ val customColor2ContainerDarkHighContrast = Color(0xFF9CD097)
 val onCustomColor2ContainerDarkHighContrast = Color(0xFF000F01)
 
 // ── Moon Wash brand accents (used by animation & UI elements) ─────────────────
-val Moonbeam  = Color(0xFFFFAA42)
+val Moonbeam  = Color(0xFFFA7F50)
 val Cream     = Color(0xFFE8DFB8)
 val MintGlow  = Color(0xFFB2D4BA)
 val Sage      = Color(0xFFB4BCA8)
