@@ -54,7 +54,7 @@ fun ProfileScreen(
     ) { granted ->
         if (granted) {
             notificationsOn = true
-            viewModel.updateNotifications(true, user?.notificationTime ?: "08:00")
+            viewModel.updateNotifications(true, user?.notificationTime ?: "08:00", test = true)
         }
     }
 
@@ -186,13 +186,13 @@ fun ProfileScreen(
                     ) == PackageManager.PERMISSION_GRANTED
                     if (granted) {
                         notificationsOn = true
-                        viewModel.updateNotifications(true, user?.notificationTime ?: "08:00")
+                        viewModel.updateNotifications(true, user?.notificationTime ?: "08:00", test = true)
                     } else {
                         permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
                 } else {
                     notificationsOn = enabled
-                    viewModel.updateNotifications(enabled, user?.notificationTime ?: "08:00")
+                    viewModel.updateNotifications(enabled, user?.notificationTime ?: "08:00", test = enabled)
                 }
             }
         )

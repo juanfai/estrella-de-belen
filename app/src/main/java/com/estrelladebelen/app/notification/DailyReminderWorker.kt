@@ -11,9 +11,18 @@ class DailyReminderWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        // Recrear el canal por si fue limpiado
+        NotificationHelper.createChannel(applicationContext)
+
         val nm = applicationContext.getSystemService(NotificationManager::class.java)
-        if (!nm.areNotificationsEnabled()) return Result.success()
-        nm.notify(NOTIFICATION_ID, NotificationHelper.build(applicationContext))
+        if (nm.areNotificationsEnabled()) {
+            nm.notify(NOTIFICATION_ID, NotificationHelper.build(applicationContext))
+        }
+
+        // Auto-reprogramar para mañana a la misma hora
+        val time = inputData.getString(ReminderScheduler.KEY_TIME) ?: "08:00"
+        ReminderScheduler.schedule(applicationContext, time)
+
         return Result.success()
     }
 

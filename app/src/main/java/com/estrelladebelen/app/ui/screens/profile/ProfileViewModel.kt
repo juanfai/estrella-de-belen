@@ -56,12 +56,15 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun updateNotifications(enabled: Boolean, time: String) {
+    fun updateNotifications(enabled: Boolean, time: String, test: Boolean = false) {
         viewModelScope.launch {
             userRepo.updateNotificationSettings(enabled, time)
             val ctx = getApplication<Application>()
-            if (enabled) ReminderScheduler.schedule(ctx, time)
-            else ReminderScheduler.cancel(ctx)
+            when {
+                !enabled    -> ReminderScheduler.cancel(ctx)
+                test        -> ReminderScheduler.scheduleTest(ctx, time)
+                else        -> ReminderScheduler.schedule(ctx, time)
+            }
         }
     }
 
