@@ -3,8 +3,10 @@ package com.estrelladebelen.app.ui.navigation
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -80,12 +82,20 @@ fun AppNavGraph() {
             }
         }
     ) { innerPadding ->
+        // PlayerScreen draws edge-to-edge (pure black + GL animation).
+        // Passing the Scaffold inset padding would expose the theme background
+        // as colored strips at top and bottom in light mode.
+        val effectivePadding = if (currentRoute == Screen.Player.route)
+            PaddingValues(0.dp)
+        else
+            innerPadding
+
         NavHost(
             navController = navController,
             startDestination = Screen.Splash.route,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(effectivePadding),
             enterTransition    = { fadeIn(tween(300)) },
             exitTransition     = { fadeOut(tween(300)) },
             popEnterTransition = { fadeIn(tween(300)) },
