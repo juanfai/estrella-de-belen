@@ -1,5 +1,10 @@
 package com.estrelladebelen.app.ui.screens.profile
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,22 +19,75 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.estrelladebelen.app.R
+import com.estrelladebelen.app.ui.theme.AppThemeViewModel
 import com.estrelladebelen.app.ui.theme.Moonbeam
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onSignOut: () -> Unit,
     onFavoritesClick: () -> Unit,
     onDownloadsClick: () -> Unit,
-    viewModel: ProfileViewModel = viewModel()
+    viewModel: ProfileViewModel = viewModel(),
+    themeVm: AppThemeViewModel = viewModel()
 ) {
     val user by viewModel.userProfile.collectAsStateWithLifecycle()
+    val isDark by themeVm.isDark.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    var notificationsOn by remember { mutableStateOf(user?.notificationsEnabled ?: false) }
+    LaunchedEffect(user) { notificationsOn = user?.notificationsEnabled ?: false }
+
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            notificationsOn = true
+            viewModel.updateNotifications(true, user?.notificationTime ?: "08:00")
+        }
+    }
+
+    if (showTimePicker) {
+        val currentTime = user?.notificationTime ?: "08:00"
+        val initHour = currentTime.split(":").getOrNull(0)?.toIntOrNull() ?: 8
+        val initMinute = currentTime.split(":").getOrNull(1)?.toIntOrNull() ?: 0
+        val timePickerState = rememberTimePickerState(
+            initialHour = initHour,
+            initialMinute = initMinute,
+            is24Hour = true
+        )
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text(stringResource(R.string.reminder_time_label)) },
+            text = {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
+                    TimePicker(state = timePickerState)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val newTime = "%02d:%02d".format(timePickerState.hour, timePickerState.minute)
+                    viewModel.updateNotifications(true, newTime)
+                    showTimePicker = false
+                }) { Text(stringResource(R.string.action_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -109,18 +167,44 @@ fun ProfileScreen(
         SectionLabel(stringResource(R.string.profile_settings))
         Spacer(Modifier.height(8.dp))
 
-        var notificationsOn by remember { mutableStateOf(user?.notificationsEnabled ?: false) }
-        LaunchedEffect(user) { notificationsOn = user?.notificationsEnabled ?: false }
+        ProfileToggleRow(
+            icon = if (isDark) Icons.Filled.Bedtime else Icons.Filled.WbSunny,
+            label = stringResource(R.string.settings_dark_mode),
+            checked = isDark,
+            onCheckedChange = { themeVm.toggle() }
+        )
 
         ProfileToggleRow(
             icon = Icons.Filled.Notifications,
             label = stringResource(R.string.settings_notifications),
             checked = notificationsOn,
-            onCheckedChange = {
-                notificationsOn = it
-                viewModel.updateNotifications(it, user?.notificationTime ?: "08:00")
+            onCheckedChange = { enabled ->
+                if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val granted = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (granted) {
+                        notificationsOn = true
+                        viewModel.updateNotifications(true, user?.notificationTime ?: "08:00")
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                } else {
+                    notificationsOn = enabled
+                    viewModel.updateNotifications(enabled, user?.notificationTime ?: "08:00")
+                }
             }
         )
+
+        if (notificationsOn) {
+            ProfileActionRow(
+                icon = Icons.Filled.Schedule,
+                label = stringResource(R.string.reminder_time_label),
+                trailingLabel = user?.notificationTime ?: "08:00",
+                onClick = { showTimePicker = true }
+            )
+        }
+
         ProfileActionRow(
             icon = Icons.Filled.Language,
             label = stringResource(R.string.settings_language),
@@ -136,9 +220,7 @@ fun ProfileScreen(
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.error
             ),
-            border = ButtonDefaults.outlinedButtonBorder.copy(
-                // tint border with error color
-            )
+            border = ButtonDefaults.outlinedButtonBorder.copy()
         ) {
             Text(stringResource(R.string.profile_sign_out))
         }
