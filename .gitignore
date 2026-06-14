@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Secrets — never commit
+web-admin/service-account.json
+web-admin/node_modules/

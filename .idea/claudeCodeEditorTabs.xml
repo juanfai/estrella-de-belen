@@ -1,19 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ClaudeCodeEditorTabs">
-    <option name="activeSessionId" value="c916ef5e-0715-4af5-8743-f9448b94bf9b" />
+    <option name="activeSessionId" value="bd0f4caa-b436-452f-9677-f57fd57f38eb" />
     <option name="openSessionIds">
       <list>
         <option value="c916ef5e-0715-4af5-8743-f9448b94bf9b" />
+        <option value="bd0f4caa-b436-452f-9677-f57fd57f38eb" />
       </list>
     </option>
     <option name="sessionPaths">
       <map>
+        <entry key="bd0f4caa-b436-452f-9677-f57fd57f38eb" value="/sessions/ffe9a63f-a0c6-4e71-b669-2cb46dd7e981" />
         <entry key="c916ef5e-0715-4af5-8743-f9448b94bf9b" value="/sessions/ffe9a63f-a0c6-4e71-b669-2cb46dd7e981" />
       </map>
     </option>
     <option name="sessionTitles">
       <map>
+        <entry key="bd0f4caa-b436-452f-9677-f57fd57f38eb" value="te doy contexto This session is being continued fr" />
         <entry key="c916ef5e-0715-4af5-8743-f9448b94bf9b" value="te doy contexto This session is being continued fr" />
       </map>
     </option>
