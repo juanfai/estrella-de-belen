@@ -77,4 +77,7 @@
     <string name="notification_body">✨Tu momento de meditación te espera 🧘✨?</string>
     <string name="reminder_time_label">Hora del recordatorio</string>
     <string name="action_confirm">Aceptar</string>
+
+    <!-- Network -->
+    <string name="no_internet">Sin conexión a internet</string>
 </resources>

@@ -87,8 +87,8 @@ Bottom Nav (2 tabs)
 │               PlayerScreen (full-screen)
 │
 └── 👤 Profile  →  ProfileScreen
-
-[MiniPlayer floating above nav bar when audio is active outside PlayerScreen]
+                       ├── FavoritesScreen
+                       └── DownloadsScreen
 ```
 
 ---
@@ -96,7 +96,7 @@ Bottom Nav (2 tabs)
 ## Screens
 
 ### SplashScreen
-- "Estrella de Belén" logo on lavender background
+- Logo (`logo.xml` VectorDrawable, Moonbeam color `#FF8750`) on dark background, fade-in animation
 - Checks for active session
 - Redirects to Login or Home
 
@@ -123,11 +123,6 @@ Bottom Nav (2 tabs)
 - If the user manually turns off the screen → audio continues (MediaSessionService)
 - Media notification on lock screen with play/pause
 
-### MiniPlayer (floating)
-- Appears above the nav bar when audio is active and the user navigates away from the Player
-- Shows: title + play/pause + button to return to full-screen Player
-- Only shown on Home and Profile tabs (not on Player itself)
-
 ### ProfileScreen
 - Avatar with user initials
 - Name and email
@@ -148,9 +143,18 @@ Bottom Nav (2 tabs)
 - Room DB (`DownloadedMeditation`) keeps the index of downloaded files
 
 ### Daily reminder
-- WorkManager schedules a daily notification
-- User configures the time from Profile → Settings
-- Message: "✨ Es tu momento de meditar"
+- WorkManager `PeriodicWorkRequest` (1-day interval) schedules a local notification
+- User toggles on/off and picks the time from Profile → Settings (Material3 `TimePicker` dialog)
+- On Android 13+: requests `POST_NOTIFICATIONS` permission at runtime before enabling
+- Tapping the notification opens the app via `PendingIntent` → `MainActivity`
+- Notification body: "Tu momento de meditación te espera ✦"
+- `ReminderScheduler` uses `ExistingPeriodicWorkPolicy.UPDATE` — cambiar la hora cancela y reprograma
+
+### Light / Dark mode
+- `AppThemeViewModel` (AndroidViewModel) holds `isDark: StateFlow<Boolean>`, persisted in SharedPreferences
+- Default: dark
+- `MainActivity` observes it and passes `darkTheme` to `EstrellaDeBelénTheme`; all screens react instantly
+- Toggle en Profile → Settings (icono luna/sol); usa `viewModel(LocalContext.current as ComponentActivity)` para compartir la misma instancia que `MainActivity`
 
 ### "New" badge
 - `Meditation.isNew` computed: `createdAt < 7 days ago`
@@ -184,6 +188,13 @@ Hosted on Firebase Hosting (`estrella-de-belen-85a2b` site) — plain HTML + Fir
 cd web-admin
 nvm use 22 && firebase deploy
 ```
+
+**Admin access setup (one-time):**
+```bash
+cd web-admin
+node set-admin.js <email>   # sets custom claim admin:true via Admin SDK
+```
+Requires `service-account.json` (Firebase Console → Project settings → Service accounts → Generate new private key). Never commitear.
 
 **Pending:**
 - Replace `REPLACE_WITH_WEB_APP_ID` in `app.js` with the actual web app ID from Firebase Console
@@ -265,26 +276,27 @@ coil-compose = "2.x.x"
 | Area | Status |
 |---|---|
 | Android app skeleton (package rename, DI, build) | ✅ Done |
-| Color palette + Theme | ✅ Done |
+| Color palette + Theme (light + dark) | ✅ Done |
+| Light/Dark mode toggle (Profile → Settings, persisted) | ✅ Done |
 | Navigation graph (Splash → Login/Register → Home/Player/Profile) | ✅ Done |
 | Data model (`Meditation`, `UserProfile`) | ✅ Done |
 | Firestore repositories (`FirebaseMeditationRepository`, `FirebaseUserRepository`) | ✅ Done |
 | Room DB (`DownloadedMeditation`, `MeditationDao`, `AppDatabase`) | ✅ Done |
 | Auth screens (Login, Register, AuthViewModel) | ✅ Done |
-| SplashScreen | ✅ Done |
+| SplashScreen (logo VectorDrawable Moonbeam) | ✅ Done |
 | HomeScreen + HomeViewModel | ✅ Done |
 | PlayerScreen + PlayerViewModel (glow, controls, keep-screen-on) | ✅ Done |
-| MiniPlayer component | ✅ Done |
 | MediaPlaybackService (MediaSessionService + ExoPlayer) | ✅ Done |
-| ProfileScreen + ProfileViewModel | ✅ Done |
+| ProfileScreen + ProfileViewModel (stats, library, settings) | ✅ Done |
+| FavoritesScreen + DownloadsScreen | ✅ Done |
+| WorkManager daily reminders (time picker, runtime permission, tap-to-open) | ✅ Done |
+| Firestore + Storage security rules (custom claims for admin) | ✅ Done |
 | Admin web panel (create / edit / delete / upload) | ✅ Done |
+| Admin custom claim setup (`set-admin.js`) | ✅ Done |
 | Firebase Hosting deploy | ✅ Done |
+| MiniPlayer | ❌ Removed |
 | `google-services.json` in `app/` | ⚠️ Pending (needs Firebase Console) |
 | Web app ID in `web-admin/public/app.js` | ⚠️ Pending |
-| Firestore + Storage security rules | ⚠️ Pending |
-| Favorite toggle wired in NavGraph | ⚠️ Pending |
-| Download logic wired in NavGraph | ⚠️ Pending |
-| WorkManager reminders | ⚠️ Pending |
 | Streak + stats write-back on session complete | ⚠️ Pending |
 
 ---
