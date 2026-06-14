@@ -149,7 +149,7 @@ private fun FeaturedCard(meditation: Meditation, onClick: () -> Unit, modifier: 
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                            listOf(Color.Transparent, MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f))
                         )
                     )
             )
