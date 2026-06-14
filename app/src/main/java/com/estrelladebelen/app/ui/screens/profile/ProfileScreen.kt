@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.activity.ComponentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.estrelladebelen.app.R
@@ -37,7 +38,7 @@ fun ProfileScreen(
     onFavoritesClick: () -> Unit,
     onDownloadsClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel(),
-    themeVm: AppThemeViewModel = viewModel()
+    themeVm: AppThemeViewModel = viewModel(LocalContext.current as ComponentActivity)
 ) {
     val user by viewModel.userProfile.collectAsStateWithLifecycle()
     val isDark by themeVm.isDark.collectAsStateWithLifecycle()
