@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -33,7 +34,7 @@ import com.estrelladebelen.app.ui.screens.profile.ProfileViewModel
 
 private val bottomNavItems = listOf(
     Screen.Home    to (R.string.nav_home    to Icons.Filled.Home),
-    Screen.Profile to (R.string.nav_profile to Icons.Filled.Person)
+    Screen.Profile to (R.string.nav_profile to Icons.Filled.Settings)
 )
 
 @Composable

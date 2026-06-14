@@ -50,7 +50,7 @@
 
     <!-- Navigation -->
     <string name="nav_home">Inicio</string>
-    <string name="nav_profile">Perfil</string>
+    <string name="nav_profile">Ajustes</string>
 
     <!-- Profile -->
     <string name="profile_stats">Mis estadísticas</string>
