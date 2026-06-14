@@ -50,6 +50,7 @@ private const val RMS_FPS = 30
 class PlayerViewModel : ViewModel() {
 
     private val repository: MeditationRepository = AppContainer.meditationRepository
+    private val userRepo                         = AppContainer.userRepository
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState = _uiState.asStateFlow()
@@ -165,11 +166,13 @@ class PlayerViewModel : ViewModel() {
                     if (!sessionReady) return  // Stale ENDED from previous session — ignore.
                     sessionReady = false
                     animationJob?.cancel()
+                    val durationMinutes = (_uiState.value.durationMs / 60_000L).toInt().coerceAtLeast(1)
                     _uiState.value = _uiState.value.copy(
                         meditation    = null,
                         isPlaying     = false,
                         playbackEnded = true
                     )
+                    viewModelScope.launch { userRepo.recordSession(durationMinutes) }
                 }
             }
         }
