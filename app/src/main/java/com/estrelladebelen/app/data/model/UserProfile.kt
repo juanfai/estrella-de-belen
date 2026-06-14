@@ -10,5 +10,6 @@ data class UserProfile(
     val streak: Int = 0,
     val lastSessionDate: String = "",
     val notificationsEnabled: Boolean = false,
-    val notificationTime: String = "08:00"
+    val notificationTime: String = "08:00",
+    val subscriptionStatus: String = "free"
 )

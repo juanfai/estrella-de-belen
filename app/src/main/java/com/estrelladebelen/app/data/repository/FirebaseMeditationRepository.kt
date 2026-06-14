@@ -59,7 +59,8 @@ class FirebaseMeditationRepository(
             haloColor       = getString("haloColor") ?: "#9890B8",
             category        = getString("category") ?: "",
             order           = getLong("order")?.toInt() ?: 0,
-            createdAt       = getTimestamp("createdAt")?.toDate()?.time ?: 0L
+            createdAt       = getTimestamp("createdAt")?.toDate()?.time ?: 0L,
+            isFree          = getBoolean("isFree") ?: false
         )
     }
 }

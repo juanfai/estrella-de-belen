@@ -1,23 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ClaudeCodeEditorTabs">
-    <option name="activeSessionId" value="bd0f4caa-b436-452f-9677-f57fd57f38eb" />
+    <option name="activeSessionId" value="1ce8c00b-57c4-4a1b-bf82-3945902cd9c0" />
     <option name="openSessionIds">
       <list>
-        <option value="c916ef5e-0715-4af5-8743-f9448b94bf9b" />
-        <option value="bd0f4caa-b436-452f-9677-f57fd57f38eb" />
+        <option value="1ce8c00b-57c4-4a1b-bf82-3945902cd9c0" />
       </list>
     </option>
     <option name="sessionPaths">
       <map>
-        <entry key="bd0f4caa-b436-452f-9677-f57fd57f38eb" value="/sessions/ffe9a63f-a0c6-4e71-b669-2cb46dd7e981" />
-        <entry key="c916ef5e-0715-4af5-8743-f9448b94bf9b" value="/sessions/ffe9a63f-a0c6-4e71-b669-2cb46dd7e981" />
+        <entry key="1ce8c00b-57c4-4a1b-bf82-3945902cd9c0" value="/sessions/3cb36ece-24f6-4755-9911-dfb3288bf0a6" />
       </map>
     </option>
     <option name="sessionTitles">
       <map>
-        <entry key="bd0f4caa-b436-452f-9677-f57fd57f38eb" value="te doy contexto This session is being continued fr" />
-        <entry key="c916ef5e-0715-4af5-8743-f9448b94bf9b" value="te doy contexto This session is being continued fr" />
+        <entry key="1ce8c00b-57c4-4a1b-bf82-3945902cd9c0" value="lee el design.md estamos aca: la idea es que la ge" />
       </map>
     </option>
   </component>

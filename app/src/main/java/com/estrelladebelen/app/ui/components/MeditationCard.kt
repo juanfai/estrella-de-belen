@@ -1,8 +1,6 @@
 package com.estrelladebelen.app.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -14,7 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -33,7 +31,8 @@ fun MeditationCard(
     onFavoriteClick: () -> Unit,
     onDownloadClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isDownloading: Boolean = false
+    isDownloading: Boolean = false,
+    isPremiumLocked: Boolean = false
 ) {
     val shape = RoundedCornerShape(16.dp)
 
@@ -47,7 +46,6 @@ fun MeditationCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column {
-            // Thumbnail
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -63,7 +61,7 @@ fun MeditationCard(
                     )
                 }
 
-                if (meditation.isNew) {
+                if (meditation.isNew && !isPremiumLocked) {
                     Surface(
                         shape = RoundedCornerShape(bottomEnd = 10.dp),
                         color = MaterialTheme.colorScheme.tertiaryContainer,
@@ -75,6 +73,28 @@ fun MeditationCard(
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
+                    }
+                }
+
+                if (isPremiumLocked) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.45f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.badge_premium),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -113,37 +133,39 @@ fun MeditationCard(
                     )
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    IconButton(onClick = onFavoriteClick, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                            contentDescription = stringResource(R.string.action_favorite),
-                            tint = if (isFavorite) Moonbeam else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(4.dp))
-                    IconButton(
-                        onClick = onDownloadClick,
-                        modifier = Modifier.size(32.dp),
-                        enabled = !isDownloading
+                if (!isPremiumLocked) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
                     ) {
-                        if (isDownloading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        } else {
+                        IconButton(onClick = onFavoriteClick, modifier = Modifier.size(32.dp)) {
                             Icon(
-                                imageVector = if (isDownloaded) Icons.Filled.DownloadDone else Icons.Filled.Download,
-                                contentDescription = stringResource(R.string.action_download),
-                                tint = if (isDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                contentDescription = stringResource(R.string.action_favorite),
+                                tint = if (isFavorite) Moonbeam else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp)
                             )
+                        }
+                        Spacer(Modifier.width(4.dp))
+                        IconButton(
+                            onClick = onDownloadClick,
+                            modifier = Modifier.size(32.dp),
+                            enabled = !isDownloading
+                        ) {
+                            if (isDownloading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = if (isDownloaded) Icons.Filled.DownloadDone else Icons.Filled.Download,
+                                    contentDescription = stringResource(R.string.action_download),
+                                    tint = if (isDownloaded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }

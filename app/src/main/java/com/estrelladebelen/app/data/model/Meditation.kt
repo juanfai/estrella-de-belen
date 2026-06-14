@@ -10,7 +10,8 @@ data class Meditation(
     val haloColor: String = "#9890B8",
     val category: String = "",
     val order: Int = 0,
-    val createdAt: Long = 0L
+    val createdAt: Long = 0L,
+    val isFree: Boolean = false
 ) {
     val durationMinutes: Int get() = durationSeconds / 60
     val isNew: Boolean get() = System.currentTimeMillis() - createdAt < 7 * 24 * 60 * 60 * 1000L

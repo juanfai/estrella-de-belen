@@ -23,11 +23,18 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     private val userRepo: UserRepository = AppContainer.userRepository
     private val meditationRepo: MeditationRepository = AppContainer.meditationRepository
+    private val subscriptionRepo = AppContainer.subscriptionRepository
 
     val userProfile = userRepo.currentUser.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
         null
+    )
+
+    val isSubscribed = subscriptionRepo.isSubscribed.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        false
     )
 
     val downloads = meditationRepo.getDownloads().stateIn(

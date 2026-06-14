@@ -271,6 +271,89 @@ coil-compose = "2.x.x"
 
 ---
 
+## Subscription model
+
+### Stack: RevenueCat + Google Play Billing
+
+RevenueCat actúa como capa de abstracción sobre Google Play Billing. Maneja validación server-side, renewals, expirations y entitlements. Gratis hasta $2.5k MRR. Elegido porque simplifica la migración a iOS en el futuro (mismo SDK).
+
+### Productos (crear en Google Play Console)
+
+| Product ID | Precio | Período |
+|---|---|---|
+| `estrella_monthly` | $10 | Mensual |
+| `estrella_quarterly` | $25 | Trimestral |
+| `estrella_annual` | $99 | Anual |
+
+En RevenueCat se agrupan bajo un **Entitlement** llamado `premium`.
+
+### Contenido libre vs. premium
+
+- Estrategia: campo `isFree: Boolean` en cada documento de `meditations/` en Firestore
+- El admin puede marcarlo desde el web panel (checkbox en el form)
+- Al lanzar: **1 sola meditación gratuita**
+- Las demás muestran un overlay con badge "✦ Premium" en la card
+
+### Cambios al data model
+
+```
+meditations/{id}
+  + isFree: Boolean     // true = accesible sin suscripción
+
+users/{uid}
+  + subscriptionStatus: String   // "free" | "active"
+```
+
+`subscriptionStatus` es un caché local sincronizado desde RevenueCat al abrir la app. La fuente de verdad es RevenueCat.
+
+### Flujo de pantallas
+
+```
+HomeScreen
+  ├── Card libre (isFree=true) → PlayerScreen (igual que hoy)
+  └── Card premium (usuario free)
+        → overlay "✦ Premium" + tap bloqueado
+        → tap → PaywallScreen
+
+SettingsScreen
+  └── fila "Suscripción" → PaywallScreen (o gestión si ya tiene)
+
+PaywallScreen
+  ├── Logo + tagline
+  ├── 3 opciones: Mensual / Trimestral / Anual (anual destacado)
+  ├── Botón "Suscribirse" → Google Play Billing flow via RevenueCat
+  └── "Restaurar compras" + links Términos / Privacidad
+```
+
+### Firestore security rules — cambios necesarios
+
+```
+match /meditations/{id} {
+  allow read: if request.auth != null;
+  allow update: if request.auth.token.admin == true;
+  // isFree solo escribible por admin (ya cubierto por la regla de arriba)
+}
+```
+
+### Checklist de implementación
+
+| Tarea | Estado |
+|---|---|
+| Cuenta RevenueCat creada | ✅ Creada |
+| App en Google Play Console | ⏳ Verificando |
+| Productos de suscripción en Play Console | ⏳ Espera verificación |
+| RevenueCat vinculado a Play Console | ⏳ Espera verificación |
+| `isFree` en modelo `Meditation` + Firestore | ✅ Done |
+| `subscriptionStatus` en `UserProfile` | ✅ Done |
+| Checkbox `isFree` en web admin panel | ✅ Done |
+| Overlay premium en `MeditationCard` | ✅ Done |
+| `PaywallScreen` (UI + RevenueCat purchase flow) | ✅ Done (stub — muestra "Próximamente") |
+| Fila "Suscripción" en SettingsScreen | ✅ Done |
+| `SubscriptionRepository` (RevenueCat SDK) | ✅ Done (interfaz + StubSubscriptionRepository) |
+| Sincronización de entitlement al login | ⏳ Pendiente (requiere RevenueCat + Play Console) |
+
+---
+
 ## Implementation status
 
 | Area | Status |
@@ -297,7 +380,8 @@ coil-compose = "2.x.x"
 | MiniPlayer | ❌ Removed |
 | `google-services.json` in `app/` | ⚠️ Pending (needs Firebase Console) |
 | Web app ID in `web-admin/public/app.js` | ⚠️ Pending |
-| Streak + stats write-back on session complete | ⚠️ Pending |
+| Streak + stats write-back on session complete | ✅ Done |
+| Subscription model (RevenueCat + PaywallScreen + content gating) | ✅ UI done / stub — espera Play Console |
 
 ---
 

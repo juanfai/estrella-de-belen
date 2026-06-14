@@ -90,6 +90,9 @@ function buildCard(id, data) {
 
   const halo = data.haloColor || "#9890B8";
   const mins = Math.round((data.durationSeconds || 0) / 60);
+  const freeBadge = data.isFree === true
+    ? `<span style="background:#e8f5e9;color:#388e3c;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">Libre</span>`
+    : `<span style="background:#f3e5f5;color:#7b1fa2;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">Premium</span>`;
 
   card.innerHTML = `
     <div class="med-card-image">
@@ -104,6 +107,7 @@ function buildCard(id, data) {
         ${data.category ? `<span class="pill">${data.category}</span>` : ""}
         <span>${mins} min</span>
         <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${halo};vertical-align:middle"></span>
+        ${freeBadge}
       </div>
     </div>
     <div class="med-card-actions">
@@ -148,6 +152,8 @@ function openModal(id, data) {
   // Reset file zones
   resetDropZone("image", data?.imageUrl || null);
   resetDropZone("audio", data?.audioUrl || null);
+
+  document.getElementById("f-is-free").checked = data?.isFree === true;
 
   hide("form-error");
   show("modal-overlay");
@@ -224,6 +230,7 @@ document.getElementById("save-btn").addEventListener("click", async () => {
       haloColor,
       imageUrl: uploadedImageUrl || "",
       audioUrl: uploadedAudioUrl || "",
+      isFree: document.getElementById("f-is-free").checked,
     };
 
     if (editingId) {

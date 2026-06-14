@@ -80,4 +80,24 @@
 
     <!-- Network -->
     <string name="no_internet">Sin conexión a internet</string>
+
+    <!-- Subscription / Paywall -->
+    <string name="badge_premium">✦ Premium</string>
+    <string name="settings_subscription">Suscripción</string>
+    <string name="paywall_title">Accedé a todo el contenido</string>
+    <string name="paywall_subtitle">Meditaciones guiadas para tu bienestar</string>
+    <string name="paywall_plan_monthly">Mensual</string>
+    <string name="paywall_plan_quarterly">Trimestral</string>
+    <string name="paywall_plan_annual">Anual</string>
+    <string name="paywall_plan_monthly_price">$10 / mes</string>
+    <string name="paywall_plan_quarterly_price">$25 / trimestre</string>
+    <string name="paywall_plan_annual_price">$99 / año</string>
+    <string name="paywall_plan_annual_savings">Ahorrás 17%</string>
+    <string name="paywall_best_value">Mejor valor</string>
+    <string name="paywall_subscribe">Suscribirse</string>
+    <string name="paywall_restore">Restaurar compras</string>
+    <string name="paywall_terms">Términos de uso</string>
+    <string name="paywall_privacy">Política de privacidad</string>
+    <string name="paywall_coming_soon">Las suscripciones estarán disponibles pronto</string>
+    <string name="paywall_already_subscribed">Activa</string>
 </resources>

@@ -30,6 +30,7 @@ fun HomeScreen(
     favorites: List<String>,
     onMeditationClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
+    onPaywallClick: () -> Unit,
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -41,7 +42,8 @@ fun HomeScreen(
         onMeditationClick = onMeditationClick,
         onFavoriteClick   = onFavoriteClick,
         onDownloadClick   = { id -> viewModel.downloadMeditation(context, id) },
-        onFilterSelected  = viewModel::setFilter
+        onFilterSelected  = viewModel::setFilter,
+        onPaywallClick    = onPaywallClick
     )
 }
 
@@ -53,7 +55,8 @@ private fun HomeScreenContent(
     onMeditationClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
     onDownloadClick: (String) -> Unit,
-    onFilterSelected: (DurationFilter) -> Unit
+    onFilterSelected: (DurationFilter) -> Unit,
+    onPaywallClick: () -> Unit
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -81,10 +84,12 @@ private fun HomeScreenContent(
         }
 
         uiState.featured?.let { featured ->
+            val featuredLocked = !featured.isFree && !uiState.isSubscribed
             item(span = { GridItemSpan(2) }) {
                 FeaturedCard(
                     meditation = featured,
-                    onClick = { onMeditationClick(featured.id) },
+                    isPremiumLocked = featuredLocked,
+                    onClick = { if (featuredLocked) onPaywallClick() else onMeditationClick(featured.id) },
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }
@@ -108,12 +113,14 @@ private fun HomeScreenContent(
             itemsIndexed(uiState.meditations) { index, meditation ->
                 val paddingStart = if (index % 2 == 0) 20.dp else 0.dp
                 val paddingEnd   = if (index % 2 != 0) 20.dp else 0.dp
+                val isPremiumLocked = !meditation.isFree && !uiState.isSubscribed
                 MeditationCard(
                     meditation      = meditation,
                     isFavorite      = meditation.id in favorites,
                     isDownloaded    = meditation.id in uiState.downloads,
                     isDownloading   = meditation.id in uiState.downloadingIds,
-                    onClick         = { onMeditationClick(meditation.id) },
+                    isPremiumLocked = isPremiumLocked,
+                    onClick         = { if (isPremiumLocked) onPaywallClick() else onMeditationClick(meditation.id) },
                     onFavoriteClick = { onFavoriteClick(meditation.id) },
                     onDownloadClick = { onDownloadClick(meditation.id) },
                     modifier = Modifier.padding(start = paddingStart, end = paddingEnd)
@@ -124,7 +131,12 @@ private fun HomeScreenContent(
 }
 
 @Composable
-private fun FeaturedCard(meditation: Meditation, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun FeaturedCard(
+    meditation: Meditation,
+    isPremiumLocked: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val shape = RoundedCornerShape(20.dp)
     Card(
         onClick = onClick,
@@ -154,23 +166,40 @@ private fun FeaturedCard(meditation: Meditation, onClick: () -> Unit, modifier: 
                     )
             )
 
+            if (isPremiumLocked) {
+                Surface(
+                    shape = RoundedCornerShape(bottomStart = 10.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Text(
+                        text = stringResource(R.string.badge_premium),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(16.dp)
             ) {
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.9f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.home_featured_label),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                    )
+                if (!isPremiumLocked) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.9f)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.home_featured_label),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
                 }
-                Spacer(Modifier.height(4.dp))
                 Text(
                     text = meditation.title,
                     style = MaterialTheme.typography.titleLarge,
@@ -237,7 +266,7 @@ private fun greeting(name: String): String {
 // ─── Preview ───────────────────────────────────────────────
 
 private val previewMeditations = listOf(
-    Meditation(id = "1", title = "Paz interior",     category = "paz",   durationSeconds = 300,  haloColor = "#7C3AED", createdAt = System.currentTimeMillis()),
+    Meditation(id = "1", title = "Paz interior",     category = "paz",   durationSeconds = 300,  haloColor = "#7C3AED", createdAt = System.currentTimeMillis(), isFree = true),
     Meditation(id = "2", title = "Sueño profundo",   category = "sueño", durationSeconds = 600,  haloColor = "#3B82F6"),
     Meditation(id = "3", title = "Concentración",    category = "foco",  durationSeconds = 1200, haloColor = "#10B981"),
     Meditation(id = "4", title = "Relajación total", category = "paz",   durationSeconds = 900,  haloColor = "#F97316"),
@@ -248,7 +277,8 @@ private val previewUiState = HomeUiState(
     meditations = previewMeditations,
     featured    = previewMeditations.first(),
     downloads   = listOf("2"),
-    downloadingIds = setOf("3")
+    downloadingIds = setOf("3"),
+    isSubscribed = false
 )
 
 @Preview(showBackground = true, showSystemUi = true, name = "Home")
@@ -262,7 +292,8 @@ private fun HomeScreenPreview() {
             onMeditationClick = {},
             onFavoriteClick   = {},
             onDownloadClick   = {},
-            onFilterSelected  = {}
+            onFilterSelected  = {},
+            onPaywallClick    = {}
         )
     }
 }
@@ -278,7 +309,8 @@ private fun HomeScreenLoadingPreview() {
             onMeditationClick = {},
             onFavoriteClick   = {},
             onDownloadClick   = {},
-            onFilterSelected  = {}
+            onFilterSelected  = {},
+            onPaywallClick    = {}
         )
     }
 }

@@ -127,7 +127,8 @@ class FirebaseUserRepository : UserRepository {
             streak               = getLong("streak")?.toInt() ?: 0,
             lastSessionDate      = getString("lastSessionDate") ?: "",
             notificationsEnabled = getBoolean("notificationsEnabled") ?: false,
-            notificationTime     = getString("notificationTime") ?: "08:00"
+            notificationTime     = getString("notificationTime") ?: "08:00",
+            subscriptionStatus   = getString("subscriptionStatus") ?: "free"
         )
     }
 
@@ -140,6 +141,7 @@ class FirebaseUserRepository : UserRepository {
         "streak"               to streak,
         "lastSessionDate"      to lastSessionDate,
         "notificationsEnabled" to notificationsEnabled,
-        "notificationTime"     to notificationTime
+        "notificationTime"     to notificationTime,
+        "subscriptionStatus"   to subscriptionStatus
     )
 }

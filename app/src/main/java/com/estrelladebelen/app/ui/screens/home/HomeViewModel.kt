@@ -24,12 +24,14 @@ data class HomeUiState(
     val activeFilter: DurationFilter = DurationFilter.ALL,
     val error: String? = null,
     val downloads: List<String> = emptyList(),
-    val downloadingIds: Set<String> = emptySet()
+    val downloadingIds: Set<String> = emptySet(),
+    val isSubscribed: Boolean = false
 )
 
 class HomeViewModel : ViewModel() {
 
     private val repository: MeditationRepository = AppContainer.meditationRepository
+    private val subscriptionRepo = AppContainer.subscriptionRepository
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
@@ -39,6 +41,15 @@ class HomeViewModel : ViewModel() {
     init {
         loadMeditations()
         observeDownloads()
+        observeSubscription()
+    }
+
+    private fun observeSubscription() {
+        viewModelScope.launch {
+            subscriptionRepo.isSubscribed.collect { subscribed ->
+                _uiState.value = _uiState.value.copy(isSubscribed = subscribed)
+            }
+        }
     }
 
     private fun observeDownloads() {
@@ -100,7 +111,7 @@ class HomeViewModel : ViewModel() {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         meditations = list,
-                        featured = list.firstOrNull()
+                        featured = list.firstOrNull { it.isFree } ?: list.firstOrNull()
                     )
                 }
                 .onFailure { e ->

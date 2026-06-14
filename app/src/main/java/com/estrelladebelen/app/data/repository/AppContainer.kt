@@ -9,10 +9,13 @@ object AppContainer {
         private set
     lateinit var userRepository: UserRepository
         private set
+    lateinit var subscriptionRepository: SubscriptionRepository
+        private set
 
     fun init(context: Context) {
         val dao = AppDatabase.getInstance(context).meditationDao()
-        meditationRepository = FirebaseMeditationRepository(dao)
-        userRepository       = FirebaseUserRepository()
+        meditationRepository   = FirebaseMeditationRepository(dao)
+        userRepository         = FirebaseUserRepository()
+        subscriptionRepository = StubSubscriptionRepository()
     }
 }

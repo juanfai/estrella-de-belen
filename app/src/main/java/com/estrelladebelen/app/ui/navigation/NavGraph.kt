@@ -27,6 +27,7 @@ import com.estrelladebelen.app.ui.screens.auth.RegisterScreen
 import com.estrelladebelen.app.ui.screens.home.HomeScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerViewModel
+import com.estrelladebelen.app.ui.screens.paywall.PaywallScreen
 import com.estrelladebelen.app.ui.screens.profile.DownloadsScreen
 import com.estrelladebelen.app.ui.screens.profile.FavoritesScreen
 import com.estrelladebelen.app.ui.screens.profile.ProfileScreen
@@ -133,6 +134,7 @@ fun AppNavGraph() {
                     onMeditationClick = { id ->
                         navController.navigate(Screen.Player.createRoute(id))
                     },
+                    onPaywallClick = { navController.navigate(Screen.Paywall.route) },
                     onFavoriteClick = { id -> profileViewModel.toggleFavorite(id) }
                 )
             }
@@ -164,8 +166,13 @@ fun AppNavGraph() {
                     },
                     onFavoritesClick = { navController.navigate(Screen.Favorites.route) },
                     onDownloadsClick = { navController.navigate(Screen.Downloads.route) },
+                    onSubscriptionClick = { navController.navigate(Screen.Paywall.route) },
                     viewModel = profileViewModel
                 )
+            }
+
+            composable(Screen.Paywall.route) {
+                PaywallScreen(onDismiss = { navController.popBackStack() })
             }
 
             composable(Screen.Favorites.route) {

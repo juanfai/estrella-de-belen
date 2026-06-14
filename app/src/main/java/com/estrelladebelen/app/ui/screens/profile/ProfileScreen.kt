@@ -37,11 +37,13 @@ fun ProfileScreen(
     onSignOut: () -> Unit,
     onFavoritesClick: () -> Unit,
     onDownloadsClick: () -> Unit,
+    onSubscriptionClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel(),
     themeVm: AppThemeViewModel = viewModel(LocalContext.current as ComponentActivity)
 ) {
     val user by viewModel.userProfile.collectAsStateWithLifecycle()
     val isDark by themeVm.isDark.collectAsStateWithLifecycle()
+    val isSubscribed by viewModel.isSubscribed.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     var notificationsOn by remember { mutableStateOf(user?.notificationsEnabled ?: false) }
@@ -167,6 +169,13 @@ fun ProfileScreen(
 
         SectionLabel(stringResource(R.string.profile_settings))
         Spacer(Modifier.height(8.dp))
+
+        ProfileActionRow(
+            icon = Icons.Filled.Star,
+            label = stringResource(R.string.settings_subscription),
+            trailingLabel = if (isSubscribed) stringResource(R.string.paywall_already_subscribed) else null,
+            onClick = onSubscriptionClick
+        )
 
         ProfileToggleRow(
             icon = if (isDark) Icons.Filled.Bedtime else Icons.Filled.WbSunny,
