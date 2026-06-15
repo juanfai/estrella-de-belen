@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -91,7 +92,11 @@ fun MeditationCard(
                             modifier = Modifier
                                 .requiredSize(width = 90.dp, height = 26.dp)
                                 .rotate(45f)
-                                .background(MaterialTheme.colorScheme.primary),
+                                .background(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer)
+                                    )
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(

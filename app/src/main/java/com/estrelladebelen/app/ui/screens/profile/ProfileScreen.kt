@@ -24,11 +24,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.activity.ComponentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.estrelladebelen.app.R
-import com.estrelladebelen.app.ui.theme.AppThemeViewModel
 import com.estrelladebelen.app.ui.theme.Moonbeam
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,11 +36,9 @@ fun ProfileScreen(
     onFavoritesClick: () -> Unit,
     onDownloadsClick: () -> Unit,
     onSubscriptionClick: () -> Unit,
-    viewModel: ProfileViewModel = viewModel(),
-    themeVm: AppThemeViewModel = viewModel(LocalContext.current as ComponentActivity)
+    viewModel: ProfileViewModel = viewModel()
 ) {
     val user by viewModel.userProfile.collectAsStateWithLifecycle()
-    val isDark by themeVm.isDark.collectAsStateWithLifecycle()
     val isSubscribed by viewModel.isSubscribed.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -274,13 +270,6 @@ fun ProfileScreen(
             label = stringResource(R.string.settings_subscription),
             trailingLabel = if (isSubscribed) stringResource(R.string.paywall_already_subscribed) else null,
             onClick = onSubscriptionClick
-        )
-
-        ProfileToggleRow(
-            icon = if (isDark) Icons.Filled.Bedtime else Icons.Filled.WbSunny,
-            label = stringResource(R.string.settings_dark_mode),
-            checked = isDark,
-            onCheckedChange = { themeVm.toggle() }
         )
 
         ProfileToggleRow(
