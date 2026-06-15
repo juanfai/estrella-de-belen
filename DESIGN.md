@@ -13,7 +13,7 @@ Full refactor of a previous audio-to-video export project, reusing its GPU anima
 |---|---|
 | UI | Jetpack Compose |
 | State | ViewModel + StateFlow |
-| Auth | Firebase Auth (Email Link / passwordless) |
+| Auth | Firebase Auth (Email + Password, Google Sign-In) |
 | Database | Firestore (metadata, favorites, stats) |
 | Audio files | Firebase Storage (authenticated access only) |
 | Streaming | ExoPlayer (androidx.media3) |
@@ -80,11 +80,7 @@ users/{uid}
 SplashScreen
     ↓ (check active session via Firebase.auth.currentUser)
 LoginScreen
-    ↓ (send email link)
-CheckEmailScreen
-    ├── mismo dispositivo: esperando que el usuario toque el link
-    └── otro dispositivo: pide email para completar sign-in
-    ↓ (link recibido via App Links → MainActivity.onNewIntent)
+    ↓ (email + contraseña  ó  "Continuar con Google")
 Bottom Nav (2 tabs)
 ├── 🏠 Home  →  HomeScreen
 │                   ↓ (tap meditation libre)
@@ -108,16 +104,12 @@ Bottom Nav (2 tabs)
 - Redirects to Login or Home
 
 ### LoginScreen
-- Solo campo de email (sin contraseña — sign-in passwordless por Email Link)
+- Campo de email + campo de contraseña (con toggle mostrar/ocultar)
+- Botón "Ingresar" → `AuthViewModel.signIn(email, password)`
+- Botón "Continuar con Google" (OutlinedButton con logo `ic_google.xml`) → lanza `GoogleSignInClient.signInIntent` via `rememberLauncherForActivityResult`, pasa el `idToken` a `AuthViewModel.signInWithGoogle(idToken)`
+- Link "¿Olvidaste tu contraseña?" → abre `AlertDialog` con campo email y botón "Enviar enlace" → `AuthViewModel.sendPasswordReset(email)`; tras el envío muestra mensaje de éxito en verde
 - Logo VectorDrawable `logo.xml` a 72dp
-- Botón "Enviar enlace" → llama `AuthViewModel.sendSignInLink(email)`
 - Soft dark aesthetic (background `#1A1025`) for visual continuity with the animation
-- Al enviar → navega a CheckEmailScreen
-
-### CheckEmailScreen
-- **Modo mismo dispositivo** (email conocido): muestra el email, hint "revisá tu carpeta de spam", botones Reenviar / Cambiar email
-- **Modo otro dispositivo** (link abierto en un dispositivo diferente al que lo solicitó): muestra campo de email para que el usuario lo confirme antes de completar el sign-in (requisito de seguridad de Firebase)
-- `isCrossDevice = email.isBlank() && uiState.pendingLink != null`
 
 ### HomeScreen
 - Dynamic time-based greeting: "Buenos días / tardes / noches, [name]"
@@ -185,17 +177,20 @@ Bottom Nav (2 tabs)
 Hosted on Firebase Hosting (`estrella-de-belen-85a2b` site) — plain HTML + Firebase JS SDK v10.
 
 **Features implemented:**
-- Email/password login (Firebase Auth) — only the admin account can access
-- List view of all meditations ordered by `order` field
-- Create new meditation: title, description, category, duration, order, halo color, image, audio
-- Edit existing meditation (pre-fills all fields)
-- Delete with confirmation modal
-- Drag & drop file upload for audio and image, with progress bars
-- Auto-detects audio duration from the file (fills the duration field automatically)
-- Image preview before save
-- 9 preset color swatches + free color picker for `haloColor`
-- Saves `createdAt` server timestamp on new docs
-- Displays friendly auth error messages in Spanish
+- Email/password login + Google Sign-In (`signInWithPopup`) — sólo usuarios con custom claim `admin:true` pueden acceder
+- Verificación del claim en `onAuthStateChanged`: si el token no tiene `admin:true`, se hace `signOut()` inmediato y se muestra error
+- "¿Olvidaste tu contraseña?" → `sendPasswordResetEmail` con mensaje de éxito inline
+- Lista de meditaciones ordenada por campo `order`
+- **Reordenamiento drag & drop**: cada card tiene un handle `⠿ ⠿`; al soltar, se ejecuta un `writeBatch` que reescribe el campo `order` (1, 2, 3…) de todos los documentos afectados. El campo numérico de orden fue eliminado del formulario.
+- Nuevas meditaciones se agregan al final (`order = cardCount + 1`) automáticamente
+- Crear / editar / eliminar meditaciones (modal con pre-fill)
+- Drag & drop de archivos para audio e imagen, con barras de progreso
+- Auto-detección de duración del audio
+- Preview de imagen antes de guardar
+- 9 swatches de color + color picker libre para `haloColor`
+- Checkbox `isFree` (libre sin suscripción)
+- Guarda `createdAt` server timestamp en docs nuevos
+- Mensajes de error de auth en español
 
 **Deploy:**
 ```bash
@@ -204,12 +199,16 @@ cd web-admin
 nvm use 22 && firebase deploy
 ```
 
-**Admin access setup (one-time):**
+**Admin access setup (one-time por cuenta):**
 ```bash
 cd web-admin
 node set-admin.js <email>   # sets custom claim admin:true via Admin SDK
 ```
+Funciona tanto para cuentas email/password como para cuentas Google — lo que importa es el email registrado en Firebase Auth.
 Requires `service-account.json` (Firebase Console → Project settings → Service accounts → Generate new private key). Never commitear.
+
+**Habilitar Google Sign-In (Firebase Console):**
+Firebase Console → Authentication → Sign-in method → Google → Activar → Guardar.
 
 **Pending:**
 - Replace `REPLACE_WITH_WEB_APP_ID` in `app.js` with the actual web app ID from Firebase Console
@@ -236,66 +235,56 @@ Requires `service-account.json` (Firebase Console → Project settings → Servi
 
 ---
 
-## Email Link Authentication (passwordless)
+## Authentication
 
-### Flujo completo
+### Métodos disponibles
 
-1. Usuario ingresa su email en `LoginScreen`
-2. App llama `Firebase.auth.sendSignInLinkToEmail(email, actionCodeSettings)` — Firebase envía el link por email
-3. App guarda el email en `SharedPreferences ("estrella_auth" → "pending_email")` para sobrevivir muerte del proceso
-4. Usuario toca el link en el email → el OS abre la app via App Links (no el browser)
-5. `MainActivity.onNewIntent` detecta el link, llama `userRepository.updatePendingEmailLink(link)`
-6. NavGraph observa `pendingEmailLink` via `LaunchedEffect` y llama `authViewModel.handleEmailLink(link)`
-7. `AuthViewModel.handleEmailLink` busca el email (memoria → SharedPreferences → cross-device)
-8. `Firebase.auth.signInWithEmailLink(email, link)` completa el sign-in
+| Método | App Android | Web Admin |
+|---|---|---|
+| Email + contraseña | ✅ | ✅ |
+| Google Sign-In | ✅ | ✅ (`signInWithPopup`) |
+| Olvidé mi contraseña | ✅ `AlertDialog` | ✅ sección inline |
 
-### ActionCodeSettings
+### Flujo Android — Email + Password
 
-```kotlin
-ActionCodeSettings.newBuilder()
-    .setUrl("https://estrella-de-belen-85a2b.firebaseapp.com/login")
-    .setHandleCodeInApp(true)
-    .setAndroidPackageName("com.estrelladebelen.app", true, "1")
-    .build()
-```
+1. `LoginScreen` → usuario ingresa email + contraseña → botón "Ingresar"
+2. `AuthViewModel.signIn(email, password)` → `FirebaseUserRepository.signIn()` → `auth.signInWithEmailAndPassword().await()`
+3. Si el usuario no existe en Firestore, se crea un `UserProfile` con datos del email
+4. `AuthUiState(isAuthenticated = true)` → NavGraph navega a `HomeScreen` y limpia el back stack
 
-Se usa el dominio `firebaseapp.com` porque Firebase auto-publica el `assetlinks.json` ahí una vez que el SHA-256 está registrado en Firebase Console — sin necesidad de deploy manual.
+### Flujo Android — Google Sign-In
 
-### App Links (AndroidManifest)
+1. `LoginScreen` lanza `GoogleSignInClient.signInIntent` via `rememberLauncherForActivityResult`
+2. El resultado devuelve un `GoogleSignInAccount` → se extrae el `idToken`
+3. `AuthViewModel.signInWithGoogle(idToken)` → `FirebaseUserRepository.signInWithGoogle()` → `auth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).await()`
+4. Mismo destino: `AuthUiState(isAuthenticated = true)` → Home
 
-```xml
-<intent-filter android:autoVerify="true">
-    <action android:name="android.intent.action.VIEW" />
-    <category android:name="android.intent.category.DEFAULT" />
-    <category android:name="android.intent.category.BROWSABLE" />
-    <data android:scheme="https" android:host="estrella-de-belen-85a2b.firebaseapp.com" />
-</intent-filter>
-```
+### Flujo Android — Recuperar contraseña
 
-`android:launchMode="singleTask"` en MainActivity para que `onNewIntent` reciba el link si la app ya estaba abierta.
+1. Usuario toca "¿Olvidaste tu contraseña?" en `LoginScreen`
+2. Se abre un `AlertDialog` con campo email (pre-llenado con lo que haya en el campo)
+3. `AuthViewModel.sendPasswordReset(email)` → `auth.sendPasswordResetEmail(email).await()`
+4. En éxito, el dialog muestra "¡Listo! Revisá tu email y la carpeta de spam." en color primario; el botón cambia a "Aceptar" para cerrar
 
-### Registro de SHA-256 (one-time setup)
+### Google Sign-In — setup requerido
 
-Firebase Console → Project settings → Android app → Add fingerprint:
+1. Firebase Console → Authentication → Sign-in method → **Google** → Activar → Guardar
+2. Registrar el **SHA-1** del debug keystore en Firebase Console → Project settings → Android app → Add fingerprint:
+   ```bash
+   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+   ```
+3. Descargar el nuevo `google-services.json` y reemplazar el de `app/`
+4. El SHA-256 del debug keystore ya está registrado:
+   ```
+   5C:16:F2:04:27:C4:88:7E:BA:EA:D3:29:B2:86:A3:C3:EA:C7:F3:FA:52:CA:68:76:28:3A:EC:B6:F3:4D:E9:83
+   ```
+   El SHA-1 es necesario para Google Sign-In específicamente. SHA-256 era para App Links (ya no usado).
 
-```
-# Debug keystore:
-5C:16:F2:04:27:C4:88:7E:BA:EA:D3:29:B2:86:A3:C3:EA:C7:F3:FA:52:CA:68:76:28:3A:EC:B6:F3:4D:E9:83
+### Web Admin — access control
 
-# Release keystore: agregar cuando se genere el release build
-```
-
-### Casos edge manejados
-
-| Caso | Solución |
-|---|---|
-| App cerrada entre envío y tap del link | Email guardado en SharedPreferences |
-| Link abierto en otro dispositivo | `CheckEmailScreen` cross-device pide el email al usuario |
-| Email link inválido / expirado | Error con "Solicitá uno nuevo" + botón Reenviar |
-
-### Habilitar en Firebase Console
-
-Firebase Console → Authentication → Sign-in method → Email/password → habilitar **"Email link (passwordless sign-in)"**
+- Tras cualquier login, `onAuthStateChanged` llama `user.getIdTokenResult()` y verifica `claims.admin === true`
+- Si el claim no existe → `signOut()` inmediato + mensaje de error en el formulario
+- El claim se otorga con `node set-admin.js <email>` (funciona para cuentas email/pass y Google)
 
 ---
 
@@ -303,27 +292,30 @@ Firebase Console → Authentication → Sign-in method → Email/password → ha
 
 ```toml
 # Firebase
-firebase-bom = "33.x.x"
+firebase-bom = "33.7.0"
 firebase-auth-ktx
 firebase-firestore-ktx
 firebase-storage-ktx
 
+# Google Sign-In
+play-services-auth = "21.3.0"   # com.google.android.gms:play-services-auth
+
 # Media
-androidx-media3-exoplayer = "1.x.x"
-androidx-media3-session = "1.x.x"
+androidx-media3-exoplayer = "1.4.1"
+androidx-media3-session = "1.4.1"
 
 # Navigation
-androidx-navigation-compose = "2.x.x"
+androidx-navigation-compose = "2.8.4"
 
 # Room
-androidx-room-runtime = "2.x.x"
-androidx-room-ktx = "2.x.x"
+androidx-room-runtime = "2.6.1"
+androidx-room-ktx = "2.6.1"
 
 # WorkManager
-androidx-work-runtime-ktx = "2.x.x"
+androidx-work-runtime-ktx = "2.9.1"
 
 # Image loading
-coil-compose = "2.x.x"
+coil-compose = "2.7.0"
 
 # Subscriptions (stub activo, se activa cuando Google Play Console esté verificado)
 revenuecat = "8.4.0"   # com.revenuecat.purchases:purchases
@@ -446,7 +438,8 @@ match /meditations/{id} {
 | Data model (`Meditation`, `UserProfile`) | ✅ Done |
 | Firestore repositories (`FirebaseMeditationRepository`, `FirebaseUserRepository`) | ✅ Done |
 | Room DB (`DownloadedMeditation`, `MeditationDao`, `AppDatabase`) | ✅ Done |
-| Auth screens (Login → CheckEmail, AuthViewModel — Email Link passwordless) | ✅ Done |
+| Auth — Email + Password (`signInWithEmailAndPassword`, `sendPasswordResetEmail`) | ✅ Done |
+| Auth — Google Sign-In (`play-services-auth` + `GoogleAuthProvider`) | ✅ Done |
 | SplashScreen (logo VectorDrawable Moonbeam) | ✅ Done |
 | HomeScreen + HomeViewModel | ✅ Done |
 | PlayerScreen + PlayerViewModel (glow, controls, keep-screen-on) | ✅ Done |
@@ -456,15 +449,17 @@ match /meditations/{id} {
 | WorkManager daily reminders (time picker, runtime permission, tap-to-open) | ✅ Done |
 | Firestore + Storage security rules (custom claims for admin) | ✅ Done |
 | Admin web panel (create / edit / delete / upload) | ✅ Done |
+| Admin web panel — drag & drop reordering (writeBatch por posición) | ✅ Done |
+| Admin web panel — Google Sign-In + admin claim check en `onAuthStateChanged` | ✅ Done |
+| Admin web panel — forgot password inline | ✅ Done |
 | Admin custom claim setup (`set-admin.js`) | ✅ Done |
 | Firebase Hosting deploy | ✅ Done |
 | MiniPlayer | ❌ Removed |
 | `google-services.json` in `app/` | ⚠️ Pending (needs Firebase Console) |
 | Web app ID in `web-admin/public/app.js` | ⚠️ Pending |
+| SHA-1 debug keystore en Firebase Console (requerido para Google Sign-In Android) | ⚠️ Pending |
 | Streak + stats write-back on session complete | ✅ Done |
 | Subscription model (RevenueCat + PaywallScreen + content gating) | ✅ UI done / stub — espera Play Console |
-| Email Link auth — App Links intent filter + SHA-256 registration | ✅ Done (pendiente: registrar SHA en Firebase Console) |
-| Email Link auth — cross-device sign-in (CheckEmailScreen) | ✅ Done |
 | PlayerScreen light mode edge-to-edge fix | ✅ Done |
 | isFree checkbox en web admin panel | ✅ Done |
 

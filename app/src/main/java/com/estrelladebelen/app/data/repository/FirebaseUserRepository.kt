@@ -3,6 +3,7 @@ package com.estrelladebelen.app.data.repository
 import android.content.Context
 import com.estrelladebelen.app.data.model.UserProfile
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
@@ -51,6 +52,18 @@ class FirebaseUserRepository(context: Context) : UserRepository {
                 uid,
                 email,
                 email.substringBefore("@").replaceFirstChar { it.uppercase() }
+            )
+        }
+
+    override suspend fun signInWithGoogle(idToken: String): Result<UserProfile> =
+        runCatching {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val result = auth.signInWithCredential(credential).await()
+            val user = result.user ?: error("UID nulo")
+            fetchOrCreateUserProfile(
+                uid   = user.uid,
+                email = user.email ?: "",
+                name  = user.displayName ?: (user.email?.substringBefore("@") ?: "")
             )
         }
 

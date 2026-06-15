@@ -8,6 +8,7 @@
     <string name="auth_password">Contraseña</string>
     <string name="auth_email_hint">Accedé a tu cuenta</string>
     <string name="auth_sign_in">Ingresar</string>
+    <string name="auth_google">Continuar con Google</string>
     <string name="auth_forgot_password">¿Olvidaste tu contraseña?</string>
     <string name="auth_reset_title">Recuperar contraseña</string>
     <string name="auth_reset_body">Ingresá tu email y te enviamos un enlace para restablecer tu contraseña.</string>

@@ -7,6 +7,7 @@ interface UserRepository {
     val currentUser: Flow<UserProfile?>
 
     suspend fun signIn(email: String, password: String): Result<UserProfile>
+    suspend fun signInWithGoogle(idToken: String): Result<UserProfile>
     suspend fun sendPasswordResetEmail(email: String): Result<Unit>
     suspend fun signOut()
     suspend fun toggleFavorite(meditationId: String)

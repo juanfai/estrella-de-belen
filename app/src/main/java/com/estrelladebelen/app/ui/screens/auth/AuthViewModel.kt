@@ -38,6 +38,22 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    fun signInWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            val result = userRepo.signInWithGoogle(idToken)
+            _uiState.value = if (result.isSuccess) {
+                AuthUiState(isAuthenticated = true)
+            } else {
+                AuthUiState(error = friendlyError(result.exceptionOrNull()))
+            }
+        }
+    }
+
+    fun setError(msg: String) {
+        _uiState.value = _uiState.value.copy(isLoading = false, error = msg)
+    }
+
     fun sendPasswordReset(email: String) {
         val e = email.trim()
         if (e.isBlank()) { _uiState.value = _uiState.value.copy(error = "Ingresá tu email"); return }
