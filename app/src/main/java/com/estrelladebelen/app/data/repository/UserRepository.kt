@@ -10,6 +10,7 @@ interface UserRepository {
     suspend fun signInWithGoogle(idToken: String): Result<UserProfile>
     suspend fun sendPasswordResetEmail(email: String): Result<Unit>
     suspend fun signOut()
+    suspend fun deleteAccount(): Result<Unit>
     suspend fun toggleFavorite(meditationId: String)
     suspend fun recordSession(durationMinutes: Int)
     suspend fun updateNotificationSettings(enabled: Boolean, time: String)

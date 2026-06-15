@@ -96,9 +96,10 @@ fun MeditationCard(
                         ) {
                             Text(
                                 text = "✦",
+                                modifier = Modifier.rotate(-45f),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary
+                                color = Color.White
                             )
                         }
                     }

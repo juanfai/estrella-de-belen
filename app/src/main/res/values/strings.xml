@@ -66,6 +66,13 @@
 
     <!-- Settings -->
     <string name="settings_dark_mode">Modo oscuro</string>
+    <string name="settings_delete_account">Eliminar cuenta</string>
+    <string name="delete_account_title">¿Eliminar tu cuenta?</string>
+    <string name="delete_account_message">Esta acción eliminará permanentemente tu cuenta y todos tus datos. No se puede deshacer.</string>
+    <string name="delete_account_confirm">Eliminar cuenta</string>
+    <string name="delete_account_type_confirm">Escribí \"eliminar\" para confirmar</string>
+    <string name="delete_account_reauth">Por seguridad, cerrá sesión y volvé a iniciar sesión antes de eliminar tu cuenta.</string>
+    <string name="delete_account_error">No se pudo eliminar la cuenta. Intentá de nuevo.</string>
     <string name="settings_notifications">Recordatorio diario</string>
     <string name="settings_language">Idioma</string>
     <string name="settings_language_soon">Próximamente</string>

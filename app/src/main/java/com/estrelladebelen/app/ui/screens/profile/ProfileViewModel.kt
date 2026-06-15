@@ -63,6 +63,18 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun deleteAccount(onDone: () -> Unit, onError: (needsReauth: Boolean) -> Unit) {
+        viewModelScope.launch {
+            userRepo.deleteAccount().fold(
+                onSuccess = { onDone() },
+                onFailure = { e ->
+                    val needsReauth = e is com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
+                    onError(needsReauth)
+                }
+            )
+        }
+    }
+
     fun updateNotifications(enabled: Boolean, time: String, test: Boolean = false) {
         viewModelScope.launch {
             userRepo.updateNotificationSettings(enabled, time)

@@ -50,6 +50,10 @@ fun ProfileScreen(
     LaunchedEffect(user) { notificationsOn = user?.notificationsEnabled ?: false }
 
     var showTimePicker by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var deleteConfirmText by remember { mutableStateOf("") }
+    var deleteErrorMsg by remember { mutableStateOf<String?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -92,6 +96,66 @@ fun ProfileScreen(
         )
     }
 
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false; deleteConfirmText = "" },
+            title = { Text(stringResource(R.string.delete_account_title)) },
+            text  = {
+                Column {
+                    Text(stringResource(R.string.delete_account_message))
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = deleteConfirmText,
+                        onValueChange = { deleteConfirmText = it },
+                        label = { Text(stringResource(R.string.delete_account_type_confirm)) },
+                        singleLine = true,
+                        isError = deleteConfirmText.isNotEmpty() &&
+                                  !deleteConfirmText.trim().equals("eliminar", ignoreCase = true)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        deleteConfirmText = ""
+                        viewModel.deleteAccount(
+                            onDone  = onSignOut,
+                            onError = { needsReauth ->
+                                deleteErrorMsg = context.getString(
+                                    if (needsReauth) R.string.delete_account_reauth
+                                    else             R.string.delete_account_error
+                                )
+                            }
+                        )
+                    },
+                    enabled = deleteConfirmText.trim().equals("eliminar", ignoreCase = true),
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) { Text(stringResource(R.string.delete_account_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false; deleteConfirmText = "" }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    deleteErrorMsg?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { deleteErrorMsg = null },
+            title = { Text(stringResource(R.string.delete_account_title)) },
+            text  = { Text(msg) },
+            confirmButton = {
+                TextButton(onClick = { deleteErrorMsg = null }) {
+                    Text(stringResource(R.string.action_confirm))
+                }
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -99,10 +163,11 @@ fun ProfileScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
     ) {
-        Spacer(Modifier.height(32.dp))
-
-        // Avatar + name
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // Avatar + name + menú de 3 puntos en la misma fila
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Box(
                 modifier = Modifier
                     .size(56.dp)
@@ -118,7 +183,7 @@ fun ProfileScreen(
                 )
             }
             Spacer(Modifier.width(16.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = user?.displayName ?: "",
                     style = MaterialTheme.typography.titleMedium,
@@ -130,6 +195,40 @@ fun ProfileScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            Box {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "Más opciones",
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(R.string.settings_delete_account),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.DeleteForever,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            deleteConfirmText = ""
+                            showDeleteDialog = true
+                        }
+                    )
+                }
             }
         }
 
@@ -237,7 +336,7 @@ fun ProfileScreen(
 
         Spacer(Modifier.height(32.dp))
     }
-}
+} // ProfileScreen
 
 @Composable
 private fun StatCard(value: String, label: String, modifier: Modifier = Modifier) {

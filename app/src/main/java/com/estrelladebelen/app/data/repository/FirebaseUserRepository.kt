@@ -74,6 +74,12 @@ class FirebaseUserRepository(context: Context) : UserRepository {
 
     override suspend fun signOut() { auth.signOut() }
 
+    override suspend fun deleteAccount(): Result<Unit> = runCatching {
+        val uid  = auth.currentUser?.uid ?: error("No hay sesión activa")
+        firestore.collection("users").document(uid).delete().await()
+        auth.currentUser?.delete()?.await()
+    }
+
     override suspend fun toggleFavorite(meditationId: String) {
         val uid = auth.currentUser?.uid ?: return
         val ref = firestore.collection("users").document(uid)
