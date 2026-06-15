@@ -1,6 +1,8 @@
 package com.estrelladebelen.app.data.repository
 
+import android.content.Context
 import com.estrelladebelen.app.data.model.UserProfile
+import com.google.firebase.auth.ActionCodeSettings
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ListenerRegistration
@@ -9,16 +11,35 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 
-class FirebaseUserRepository : UserRepository {
+class FirebaseUserRepository(context: Context) : UserRepository {
 
     private val auth      = Firebase.auth
     private val firestore = Firebase.firestore
+    private val prefs     = context.getSharedPreferences("estrella_auth", Context.MODE_PRIVATE)
 
-    // Single callbackFlow that handles both auth state and Firestore doc changes.
+    // Using firebaseapp.com so Firebase auto-manages the assetlinks.json for App Links.
+    // The SHA-256 fingerprint must be registered in Firebase Console →
+    // Project settings → Android app → Add fingerprint.
+    private val actionCodeSettings = ActionCodeSettings.newBuilder()
+        .setUrl("https://estrella-de-belen-85a2b.firebaseapp.com/login")
+        .setHandleCodeInApp(true)
+        .setAndroidPackageName("com.estrelladebelen.app", true, "1")
+        .build()
+
+    private val _pendingEmailLink = MutableStateFlow<String?>(null)
+    override val pendingEmailLink: StateFlow<String?> = _pendingEmailLink.asStateFlow()
+
+    override fun updatePendingEmailLink(link: String?) {
+        _pendingEmailLink.value = link
+    }
+
     override val currentUser: Flow<UserProfile?> = callbackFlow {
         var firestoreReg: ListenerRegistration? = null
 
@@ -43,21 +64,30 @@ class FirebaseUserRepository : UserRepository {
         }
     }
 
-    override suspend fun signIn(email: String, password: String): Result<UserProfile> =
+    override suspend fun sendSignInLink(email: String): Result<Unit> =
         runCatching {
-            val result = auth.signInWithEmailAndPassword(email, password).await()
-            val uid = result.user?.uid ?: error("UID nulo")
-            fetchOrCreateUserProfile(uid, email, email.substringBefore("@").replaceFirstChar { it.uppercase() })
+            auth.sendSignInLinkToEmail(email, actionCodeSettings).await()
+            prefs.edit().putString("pending_email", email).apply()
         }
 
-    override suspend fun register(name: String, email: String, password: String): Result<UserProfile> =
+    override suspend fun completeSignInWithLink(email: String, link: String): Result<UserProfile> =
         runCatching {
-            val result = auth.createUserWithEmailAndPassword(email, password).await()
+            val result = auth.signInWithEmailLink(email, link).await()
             val uid = result.user?.uid ?: error("UID nulo")
-            val profile = UserProfile(uid = uid, displayName = name, email = email)
-            firestore.collection("users").document(uid).set(profile.toMap()).await()
-            profile
+            clearSavedEmail()
+            _pendingEmailLink.value = null
+            fetchOrCreateUserProfile(
+                uid,
+                email,
+                email.substringBefore("@").replaceFirstChar { it.uppercase() }
+            )
         }
+
+    override fun getSavedEmail(): String? = prefs.getString("pending_email", null)
+
+    override fun clearSavedEmail() {
+        prefs.edit().remove("pending_email").apply()
+    }
 
     override suspend fun signOut() { auth.signOut() }
 

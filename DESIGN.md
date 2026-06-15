@@ -13,7 +13,7 @@ Full refactor of a previous audio-to-video export project, reusing its GPU anima
 |---|---|
 | UI | Jetpack Compose |
 | State | ViewModel + StateFlow |
-| Auth | Firebase Auth (email/password) |
+| Auth | Firebase Auth (Email Link / passwordless) |
 | Database | Firestore (metadata, favorites, stats) |
 | Audio files | Firebase Storage (authenticated access only) |
 | Streaming | ExoPlayer (androidx.media3) |
@@ -79,16 +79,23 @@ users/{uid}
 ```
 SplashScreen
     ↓ (check active session via Firebase.auth.currentUser)
-LoginScreen  ←→  RegisterScreen
-    ↓
+LoginScreen
+    ↓ (send email link)
+CheckEmailScreen
+    ├── mismo dispositivo: esperando que el usuario toque el link
+    └── otro dispositivo: pide email para completar sign-in
+    ↓ (link recibido via App Links → MainActivity.onNewIntent)
 Bottom Nav (2 tabs)
 ├── 🏠 Home  →  HomeScreen
-│                   ↓ (tap meditation)
+│                   ↓ (tap meditation libre)
 │               PlayerScreen (full-screen)
+│                   ↓ (tap card premium, usuario free)
+│               PaywallScreen
 │
 └── 👤 Profile  →  ProfileScreen
                        ├── FavoritesScreen
-                       └── DownloadsScreen
+                       ├── DownloadsScreen
+                       └── Suscripción → PaywallScreen
 ```
 
 ---
@@ -100,10 +107,17 @@ Bottom Nav (2 tabs)
 - Checks for active session
 - Redirects to Login or Home
 
-### LoginScreen / RegisterScreen
-- Email + password
+### LoginScreen
+- Solo campo de email (sin contraseña — sign-in passwordless por Email Link)
+- Logo VectorDrawable `logo.xml` a 72dp
+- Botón "Enviar enlace" → llama `AuthViewModel.sendSignInLink(email)`
 - Soft dark aesthetic (background `#1A1025`) for visual continuity with the animation
-- Smooth transition to Home
+- Al enviar → navega a CheckEmailScreen
+
+### CheckEmailScreen
+- **Modo mismo dispositivo** (email conocido): muestra el email, hint "revisá tu carpeta de spam", botones Reenviar / Cambiar email
+- **Modo otro dispositivo** (link abierto en un dispositivo diferente al que lo solicitó): muestra campo de email para que el usuario lo confirme antes de completar el sign-in (requisito de seguridad de Firebase)
+- `isCrossDevice = email.isBlank() && uiState.pendingLink != null`
 
 ### HomeScreen
 - Dynamic time-based greeting: "Buenos días / tardes / noches, [name]"
@@ -114,7 +128,7 @@ Bottom Nav (2 tabs)
 - Meditations loaded from Firestore via `HomeViewModel`
 
 ### PlayerScreen
-- **Pure black background**
+- **Pure black background** — borde a borde, sin franjas del tema claro
 - Real-time pulsing glow animation via `GlowPreviewRenderer` (TextureView)
 - Breathing animation starts immediately (before audio loads)
 - **Controls only visible on tap** → auto-hide after 3 seconds
@@ -122,6 +136,7 @@ Bottom Nav (2 tabs)
 - `FLAG_KEEP_SCREEN_ON` active while on this screen
 - If the user manually turns off the screen → audio continues (MediaSessionService)
 - Media notification on lock screen with play/pause
+- **Edge-to-edge fix:** NavGraph computa `effectivePadding = PaddingValues(0.dp)` cuando `currentRoute == Screen.Player.route`, evitando que el `innerPadding` del Scaffold deje franjas claras arriba/abajo en modo light
 
 ### ProfileScreen
 - Avatar with user initials
@@ -221,6 +236,69 @@ Requires `service-account.json` (Firebase Console → Project settings → Servi
 
 ---
 
+## Email Link Authentication (passwordless)
+
+### Flujo completo
+
+1. Usuario ingresa su email en `LoginScreen`
+2. App llama `Firebase.auth.sendSignInLinkToEmail(email, actionCodeSettings)` — Firebase envía el link por email
+3. App guarda el email en `SharedPreferences ("estrella_auth" → "pending_email")` para sobrevivir muerte del proceso
+4. Usuario toca el link en el email → el OS abre la app via App Links (no el browser)
+5. `MainActivity.onNewIntent` detecta el link, llama `userRepository.updatePendingEmailLink(link)`
+6. NavGraph observa `pendingEmailLink` via `LaunchedEffect` y llama `authViewModel.handleEmailLink(link)`
+7. `AuthViewModel.handleEmailLink` busca el email (memoria → SharedPreferences → cross-device)
+8. `Firebase.auth.signInWithEmailLink(email, link)` completa el sign-in
+
+### ActionCodeSettings
+
+```kotlin
+ActionCodeSettings.newBuilder()
+    .setUrl("https://estrella-de-belen-85a2b.firebaseapp.com/login")
+    .setHandleCodeInApp(true)
+    .setAndroidPackageName("com.estrelladebelen.app", true, "1")
+    .build()
+```
+
+Se usa el dominio `firebaseapp.com` porque Firebase auto-publica el `assetlinks.json` ahí una vez que el SHA-256 está registrado en Firebase Console — sin necesidad de deploy manual.
+
+### App Links (AndroidManifest)
+
+```xml
+<intent-filter android:autoVerify="true">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="https" android:host="estrella-de-belen-85a2b.firebaseapp.com" />
+</intent-filter>
+```
+
+`android:launchMode="singleTask"` en MainActivity para que `onNewIntent` reciba el link si la app ya estaba abierta.
+
+### Registro de SHA-256 (one-time setup)
+
+Firebase Console → Project settings → Android app → Add fingerprint:
+
+```
+# Debug keystore:
+5C:16:F2:04:27:C4:88:7E:BA:EA:D3:29:B2:86:A3:C3:EA:C7:F3:FA:52:CA:68:76:28:3A:EC:B6:F3:4D:E9:83
+
+# Release keystore: agregar cuando se genere el release build
+```
+
+### Casos edge manejados
+
+| Caso | Solución |
+|---|---|
+| App cerrada entre envío y tap del link | Email guardado en SharedPreferences |
+| Link abierto en otro dispositivo | `CheckEmailScreen` cross-device pide el email al usuario |
+| Email link inválido / expirado | Error con "Solicitá uno nuevo" + botón Reenviar |
+
+### Habilitar en Firebase Console
+
+Firebase Console → Authentication → Sign-in method → Email/password → habilitar **"Email link (passwordless sign-in)"**
+
+---
+
 ## Dependencies
 
 ```toml
@@ -246,6 +324,9 @@ androidx-work-runtime-ktx = "2.x.x"
 
 # Image loading
 coil-compose = "2.x.x"
+
+# Subscriptions (stub activo, se activa cuando Google Play Console esté verificado)
+revenuecat = "8.4.0"   # com.revenuecat.purchases:purchases
 ```
 
 ---
@@ -365,7 +446,7 @@ match /meditations/{id} {
 | Data model (`Meditation`, `UserProfile`) | ✅ Done |
 | Firestore repositories (`FirebaseMeditationRepository`, `FirebaseUserRepository`) | ✅ Done |
 | Room DB (`DownloadedMeditation`, `MeditationDao`, `AppDatabase`) | ✅ Done |
-| Auth screens (Login, Register, AuthViewModel) | ✅ Done |
+| Auth screens (Login → CheckEmail, AuthViewModel — Email Link passwordless) | ✅ Done |
 | SplashScreen (logo VectorDrawable Moonbeam) | ✅ Done |
 | HomeScreen + HomeViewModel | ✅ Done |
 | PlayerScreen + PlayerViewModel (glow, controls, keep-screen-on) | ✅ Done |
@@ -382,6 +463,10 @@ match /meditations/{id} {
 | Web app ID in `web-admin/public/app.js` | ⚠️ Pending |
 | Streak + stats write-back on session complete | ✅ Done |
 | Subscription model (RevenueCat + PaywallScreen + content gating) | ✅ UI done / stub — espera Play Console |
+| Email Link auth — App Links intent filter + SHA-256 registration | ✅ Done (pendiente: registrar SHA en Firebase Console) |
+| Email Link auth — cross-device sign-in (CheckEmailScreen) | ✅ Done |
+| PlayerScreen light mode edge-to-edge fix | ✅ Done |
+| isFree checkbox en web admin panel | ✅ Done |
 
 ---
 

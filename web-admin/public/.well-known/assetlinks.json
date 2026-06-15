@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.estrelladebelen.app",
+    "sha256_cert_fingerprints": [
+      "5C:16:F2:04:27:C4:88:7E:BA:EA:D3:29:B2:86:A3:C3:EA:C7:F3:FA:52:CA:68:76:28:3A:EC:B6:F3:4D:E9:83"
+    ]
+  }
+}]

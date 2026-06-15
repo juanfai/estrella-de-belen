@@ -11,7 +11,10 @@ import kotlinx.coroutines.launch
 data class AuthUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isAuthenticated: Boolean = false
+    val isAuthenticated: Boolean = false,
+    val linkSent: Boolean = false,
+    val sentEmail: String = "",
+    val pendingLink: String? = null   // cross-device: link arrived but email unknown
 )
 
 class AuthViewModel : ViewModel() {
@@ -21,47 +24,79 @@ class AuthViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState = _uiState.asStateFlow()
 
-    fun signIn(email: String, password: String) {
+    fun sendSignInLink(email: String) {
         val e = email.trim()
-        val p = password.trim()
-        if (e.isBlank() || p.isBlank()) {
-            _uiState.value = _uiState.value.copy(error = "Completá todos los campos")
+        if (e.isBlank()) {
+            _uiState.value = _uiState.value.copy(error = "Ingresá tu email")
             return
         }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            val result = userRepo.signIn(e, p)
+            val result = userRepo.sendSignInLink(e)
+            _uiState.value = if (result.isSuccess) {
+                AuthUiState(linkSent = true, sentEmail = e)
+            } else {
+                AuthUiState(error = friendlyError(result.exceptionOrNull()?.message))
+            }
+        }
+    }
+
+    fun handleEmailLink(link: String) {
+        // Prefer in-memory email; fall back to SharedPreferences for killed-process case.
+        val email = _uiState.value.sentEmail.ifBlank { userRepo.getSavedEmail() }
+        if (email.isNullOrBlank()) {
+            // Cross-device: app opened on a different device — we have the link
+            // but not the email. Navigate to CheckEmailScreen to ask for it.
+            _uiState.value = AuthUiState(pendingLink = link, linkSent = true)
+            return
+        }
+        completeSignIn(email, link)
+    }
+
+    // Called from CheckEmailScreen when the user types their email (cross-device).
+    fun completeWithEmail(email: String) {
+        val link = _uiState.value.pendingLink ?: return
+        val e = email.trim()
+        if (e.isBlank()) {
+            _uiState.value = _uiState.value.copy(error = "Ingresá tu email")
+            return
+        }
+        completeSignIn(e, link)
+    }
+
+    private fun completeSignIn(email: String, link: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            val result = userRepo.completeSignInWithLink(email, link)
             _uiState.value = if (result.isSuccess) {
                 AuthUiState(isAuthenticated = true)
             } else {
-                AuthUiState(error = result.exceptionOrNull()?.message ?: "Error al iniciar sesión")
+                _uiState.value.copy(
+                    isLoading = false,
+                    error = "El enlace es inválido o ya expiró. Solicitá uno nuevo."
+                )
             }
         }
     }
 
-    fun register(name: String, email: String, password: String, confirmPassword: String) {
-        val n  = name.trim()
-        val e  = email.trim()
-        val p  = password.trim()
-        val cp = confirmPassword.trim()
-        when {
-            n.isBlank() || e.isBlank() || p.isBlank() ->
-                _uiState.value = _uiState.value.copy(error = "Completá todos los campos")
-            p != cp ->
-                _uiState.value = _uiState.value.copy(error = "Las contraseñas no coinciden")
-            p.length < 6 ->
-                _uiState.value = _uiState.value.copy(error = "La contraseña debe tener al menos 6 caracteres")
-            else -> viewModelScope.launch {
-                _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-                val result = userRepo.register(n, e, p)
-                _uiState.value = if (result.isSuccess) {
-                    AuthUiState(isAuthenticated = true)
-                } else {
-                    AuthUiState(error = result.exceptionOrNull()?.message ?: "Error al registrarse")
-                }
-            }
-        }
+    fun clearLinkSent() {
+        _uiState.value = _uiState.value.copy(linkSent = false)
     }
 
-    fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
+    fun clearAuth() {
+        _uiState.value = AuthUiState()
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    private fun friendlyError(msg: String?): String {
+        if (msg == null) return "Error al enviar el enlace"
+        return when {
+            "invalid-email" in msg  -> "El correo no es válido"
+            "network"       in msg  -> "Sin conexión a internet"
+            else                    -> "Error al enviar el enlace"
+        }
+    }
 }

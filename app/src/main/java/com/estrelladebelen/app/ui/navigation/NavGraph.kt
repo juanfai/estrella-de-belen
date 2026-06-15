@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,11 +20,13 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import com.estrelladebelen.app.R
+import com.estrelladebelen.app.data.repository.AppContainer
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.estrelladebelen.app.ui.screens.SplashScreen
+import com.estrelladebelen.app.ui.screens.auth.AuthViewModel
+import com.estrelladebelen.app.ui.screens.auth.CheckEmailScreen
 import com.estrelladebelen.app.ui.screens.auth.LoginScreen
-import com.estrelladebelen.app.ui.screens.auth.RegisterScreen
 import com.estrelladebelen.app.ui.screens.home.HomeScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerViewModel
@@ -44,15 +45,44 @@ private val bottomNavItems = listOf(
 fun AppNavGraph() {
     val navController = rememberNavController()
 
+    val authViewModel: AuthViewModel       = viewModel()
     val playerViewModel: PlayerViewModel   = viewModel()
     val profileViewModel: ProfileViewModel = viewModel()
 
-    val userProfile by profileViewModel.userProfile.collectAsStateWithLifecycle()
+    val authUiState  by authViewModel.uiState.collectAsState()
+    val userProfile  by profileViewModel.userProfile.collectAsStateWithLifecycle()
 
     val currentBackStack by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStack?.destination?.route
 
     val showBottomBar = currentRoute in listOf(Screen.Home.route, Screen.Profile.route)
+
+    // React to email link arriving from MainActivity via pendingEmailLink StateFlow.
+    val pendingLink by AppContainer.userRepository.pendingEmailLink.collectAsState()
+    LaunchedEffect(pendingLink) {
+        pendingLink?.let { link ->
+            authViewModel.handleEmailLink(link)
+            AppContainer.userRepository.updatePendingEmailLink(null)
+        }
+    }
+
+    // Navigate to CheckEmail right after the link is sent.
+    LaunchedEffect(authUiState.linkSent) {
+        if (authUiState.linkSent) {
+            navController.navigate(Screen.CheckEmail.route)
+            authViewModel.clearLinkSent()
+        }
+    }
+
+    // Navigate to Home when sign-in via email link completes.
+    LaunchedEffect(authUiState.isAuthenticated) {
+        if (authUiState.isAuthenticated) {
+            navController.navigate(Screen.Home.route) {
+                popUpTo(0) { inclusive = true }
+            }
+            authViewModel.clearAuth()
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -116,24 +146,15 @@ fun AppNavGraph() {
             }
 
             composable(Screen.Login.route) {
-                LoginScreen(
-                    onLoginSuccess = {
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Login.route) { inclusive = true }
-                        }
-                    },
-                    onNavigateToRegister = { navController.navigate(Screen.Register.route) }
-                )
+                LoginScreen(viewModel = authViewModel)
             }
 
-            composable(Screen.Register.route) {
-                RegisterScreen(
-                    onRegisterSuccess = {
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Login.route) { inclusive = true }
-                        }
-                    },
-                    onNavigateToLogin = { navController.popBackStack() }
+            composable(Screen.CheckEmail.route) {
+                CheckEmailScreen(
+                    email = authUiState.sentEmail,
+                    onResend = { authViewModel.sendSignInLink(authUiState.sentEmail) },
+                    onChangeEmail = { navController.popBackStack() },
+                    viewModel = authViewModel
                 )
             }
 
@@ -174,8 +195,8 @@ fun AppNavGraph() {
                             popUpTo(0) { inclusive = true }
                         }
                     },
-                    onFavoritesClick = { navController.navigate(Screen.Favorites.route) },
-                    onDownloadsClick = { navController.navigate(Screen.Downloads.route) },
+                    onFavoritesClick    = { navController.navigate(Screen.Favorites.route) },
+                    onDownloadsClick    = { navController.navigate(Screen.Downloads.route) },
                     onSubscriptionClick = { navController.navigate(Screen.Paywall.route) },
                     viewModel = profileViewModel
                 )

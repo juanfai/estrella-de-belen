@@ -4,15 +4,16 @@
     <string name="splash_tagline">Meditaciones guiadas</string>
 
     <!-- Auth -->
-    <string name="auth_sign_in">Iniciar sesión</string>
-    <string name="auth_register">Registrarse</string>
-    <string name="auth_create_account">Crear cuenta</string>
     <string name="auth_email">Correo electrónico</string>
-    <string name="auth_password">Contraseña</string>
-    <string name="auth_confirm_password">Confirmar contraseña</string>
-    <string name="auth_name">Nombre</string>
-    <string name="auth_no_account">¿No tenés cuenta?</string>
-    <string name="auth_already_have_account">¿Ya tenés cuenta?</string>
+    <string name="auth_email_hint">Ingresá tu email para acceder</string>
+    <string name="auth_send_link">Enviar enlace</string>
+    <string name="auth_check_email_title">Revisá tu email</string>
+    <string name="auth_check_email_body">Te enviamos un enlace de acceso a</string>
+    <string name="auth_check_email_hint">Hacé click en el botón del email para entrar a la app. El enlace expira en 1 hora.</string>
+    <string name="auth_resend_link">Reenviar enlace</string>
+    <string name="auth_change_email">Cambiar email</string>
+    <string name="auth_link_sent">¡Enlace enviado!</string>
+    <string name="auth_invalid_link">El enlace es inválido o ya expiró</string>
 
     <!-- Home -->
     <string name="home_subtitle">¿Qué necesitás hoy?</string>
