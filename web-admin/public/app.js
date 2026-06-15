@@ -81,8 +81,12 @@ async function signIn() {
 document.getElementById("logout-btn").addEventListener("click", () => signOut(auth));
 
 document.getElementById("google-btn").addEventListener("click", async () => {
-  const errEl = document.getElementById("login-error");
+  const errEl  = document.getElementById("login-error");
+  const btn    = document.getElementById("google-btn");
+  const btnTxt = document.getElementById("google-btn-text");
   hide(errEl);
+  btn.disabled = true;
+  btnTxt.textContent = "Conectando...";
   try {
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
@@ -91,6 +95,9 @@ document.getElementById("google-btn").addEventListener("click", async () => {
       errEl.textContent = friendlyAuthError(e.code);
       show(errEl);
     }
+  } finally {
+    btn.disabled = false;
+    btnTxt.textContent = "Continuar con Google";
   }
 });
 
@@ -540,12 +547,16 @@ function truncate(str, n) {
 }
 function friendlyAuthError(code) {
   const map = {
-    "auth/invalid-email":       "El correo no es válido.",
-    "auth/user-not-found":      "No existe una cuenta con ese correo.",
-    "auth/wrong-password":      "Contraseña incorrecta.",
-    "auth/invalid-credential":  "Email o contraseña incorrectos.",
-    "auth/too-many-requests":   "Demasiados intentos. Intentá más tarde.",
-    "auth/user-disabled":       "Esta cuenta fue deshabilitada.",
+    "auth/invalid-email":            "El correo no es válido.",
+    "auth/user-not-found":           "No existe una cuenta con ese correo.",
+    "auth/wrong-password":           "Contraseña incorrecta.",
+    "auth/invalid-credential":       "Email o contraseña incorrectos.",
+    "auth/too-many-requests":        "Demasiados intentos. Intentá más tarde.",
+    "auth/user-disabled":            "Esta cuenta fue deshabilitada.",
+    "auth/popup-blocked-by-browser": "El navegador bloqueó la ventana emergente. Permitila e intentá de nuevo.",
+    "auth/unauthorized-domain":      "Este dominio no está autorizado para Google Sign-In.",
+    "auth/operation-not-allowed":    "Google Sign-In no está habilitado en este proyecto.",
+    "auth/network-request-failed":   "Error de red. Verificá tu conexión e intentá de nuevo.",
   };
   return map[code] || `Error (${code}).`;
 }
