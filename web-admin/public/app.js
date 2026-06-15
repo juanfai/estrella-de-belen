@@ -167,11 +167,13 @@ function buildCard(id, data) {
 
   const halo = data.haloColor || "#9890B8";
   const mins = Math.round((data.durationSeconds || 0) / 60);
-  const freeBadge = data.isFree === true
+  const isFree = data.isFree === true;
+  const freeBadge = isFree
     ? `<span style="background:#e8f5e9;color:#388e3c;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">Libre</span>`
-    : `<span style="background:#f3e5f5;color:#7b1fa2;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">Premium</span>`;
+    : "";
 
   card.innerHTML = `
+    ${!isFree ? `<div class="premium-ribbon">✦</div>` : ""}
     <div class="drag-handle" title="Arrastrar para reordenar">⠿ ⠿</div>
     <div class="med-card-image">
       ${data.imageUrl

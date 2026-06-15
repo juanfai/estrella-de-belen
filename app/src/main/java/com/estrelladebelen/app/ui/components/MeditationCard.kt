@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -77,22 +78,27 @@ fun MeditationCard(
                 }
 
                 if (isPremiumLocked) {
+                    // Outer box anchors the ribbon to the top-right corner.
+                    // requiredSize on the inner box forces it wider than its parent so the
+                    // ribbon ends extend past the card edges — Card's clip cuts them cleanly.
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.45f)),
+                            .size(40.dp)
+                            .align(Alignment.TopEnd),
                         contentAlignment = Alignment.Center
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                        Box(
+                            modifier = Modifier
+                                .requiredSize(width = 90.dp, height = 26.dp)
+                                .rotate(45f)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = stringResource(R.string.badge_premium),
+                                text = "✦",
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     }
