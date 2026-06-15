@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
 import {
   getAuth, signInWithEmailAndPassword, sendPasswordResetEmail,
+  GoogleAuthProvider, signInWithPopup,
   signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
 import {
@@ -35,8 +36,18 @@ let draggedEl        = null;
 let dragFromHandle   = false;
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
   if (user) {
+    const token = await user.getIdTokenResult();
+    if (token.claims.admin !== true) {
+      await signOut(auth);
+      const errEl = document.getElementById("login-error");
+      errEl.textContent = "No tenés acceso al panel de administración.";
+      hide("login-forgot-state");
+      show("login-form-state");
+      show(errEl);
+      return;
+    }
     show("admin-view"); hide("login-view");
     document.getElementById("admin-email").textContent = user.email;
     loadMeditations();
@@ -68,6 +79,20 @@ async function signIn() {
 }
 
 document.getElementById("logout-btn").addEventListener("click", () => signOut(auth));
+
+document.getElementById("google-btn").addEventListener("click", async () => {
+  const errEl = document.getElementById("login-error");
+  hide(errEl);
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  } catch (e) {
+    if (e.code !== "auth/popup-closed-by-user") {
+      errEl.textContent = friendlyAuthError(e.code);
+      show(errEl);
+    }
+  }
+});
 
 // ── Forgot password ───────────────────────────────────────────────────────────
 document.getElementById("forgot-link").addEventListener("click", () => {
