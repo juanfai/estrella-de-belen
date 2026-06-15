@@ -4,20 +4,17 @@
     <option name="activeSessionId" value="062b327e-4d92-4b44-85c3-788c9c98902a" />
     <option name="openSessionIds">
       <list>
-        <option value="1ce8c00b-57c4-4a1b-bf82-3945902cd9c0" />
         <option value="062b327e-4d92-4b44-85c3-788c9c98902a" />
       </list>
     </option>
     <option name="sessionPaths">
       <map>
-        <entry key="062b327e-4d92-4b44-85c3-788c9c98902a" value="/sessions/new" />
-        <entry key="1ce8c00b-57c4-4a1b-bf82-3945902cd9c0" value="/sessions/3cb36ece-24f6-4755-9911-dfb3288bf0a6" />
+        <entry key="062b327e-4d92-4b44-85c3-788c9c98902a" value="/sessions/99709cd1-092f-4f73-a9b5-9e0e3c7bc056" />
       </map>
     </option>
     <option name="sessionTitles">
       <map>
-        <entry key="062b327e-4d92-4b44-85c3-788c9c98902a" value="Claude Code" />
-        <entry key="1ce8c00b-57c4-4a1b-bf82-3945902cd9c0" value="lee el design.md estamos aca: la idea es que la ge" />
+        <entry key="062b327e-4d92-4b44-85c3-788c9c98902a" value="lee el design.md This session is being continued" />
       </map>
     </option>
   </component>

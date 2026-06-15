@@ -1,18 +1,17 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
 import {
-  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+  getAuth, signInWithEmailAndPassword, sendPasswordResetEmail,
+  signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
 import {
   getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc,
-  doc, serverTimestamp, orderBy, query
+  doc, serverTimestamp, orderBy, query, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import {
-  getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject
+  getStorage, ref, uploadBytesResumable, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-storage.js";
 
 // ── Firebase config ───────────────────────────────────────────────────────────
-// TODO: replace appId with your web app ID from Firebase Console
-// (Project settings → Your apps → Add app → Web)
 const firebaseConfig = {
   apiKey:            "AIzaSyDH1cUtSCadKdFm60U79UZGUOzZDkmIx2s",
   authDomain:        "estrella-de-belen-85a2b.firebaseapp.com",
@@ -28,10 +27,12 @@ const db      = getFirestore(app);
 const storage = getStorage(app);
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let editingId     = null;
+let editingId        = null;
 let uploadedImageUrl = null;
 let uploadedAudioUrl = null;
 let pendingDeleteId  = null;
+let draggedEl        = null;
+let dragFromHandle   = false;
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, user => {
@@ -44,24 +45,68 @@ onAuthStateChanged(auth, user => {
   }
 });
 
-document.getElementById("login-btn").addEventListener("click", async () => {
+document.getElementById("login-btn").addEventListener("click", signIn);
+document.getElementById("login-password").addEventListener("keydown", e => {
+  if (e.key === "Enter") signIn();
+});
+document.getElementById("login-email").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("login-password").focus();
+});
+
+async function signIn() {
   const email    = document.getElementById("login-email").value.trim();
-  const password = document.getElementById("login-password").value.trim();
+  const password = document.getElementById("login-password").value;
   const errEl    = document.getElementById("login-error");
   hide(errEl);
+
   try {
     await signInWithEmailAndPassword(auth, email, password);
   } catch (e) {
     errEl.textContent = friendlyAuthError(e.code);
     show(errEl);
   }
-});
+}
 
 document.getElementById("logout-btn").addEventListener("click", () => signOut(auth));
 
-// Enter key on password field
-document.getElementById("login-password").addEventListener("keydown", e => {
-  if (e.key === "Enter") document.getElementById("login-btn").click();
+// ── Forgot password ───────────────────────────────────────────────────────────
+document.getElementById("forgot-link").addEventListener("click", () => {
+  document.getElementById("reset-email").value = document.getElementById("login-email").value;
+  hide("reset-success");
+  hide("reset-error");
+  hide("login-form-state");
+  show("login-forgot-state");
+});
+
+document.getElementById("back-to-login").addEventListener("click", () => {
+  hide("login-forgot-state");
+  show("login-form-state");
+});
+
+document.getElementById("reset-btn").addEventListener("click", async () => {
+  const email   = document.getElementById("reset-email").value.trim();
+  const errEl   = document.getElementById("reset-error");
+  const successEl = document.getElementById("reset-success");
+  hide(errEl); hide(successEl);
+
+  if (!email) {
+    errEl.textContent = "Ingresá tu correo electrónico.";
+    show(errEl);
+    return;
+  }
+
+  const btn = document.getElementById("reset-btn");
+  btn.disabled = true;
+  try {
+    await sendPasswordResetEmail(auth, email);
+    show(successEl);
+    btn.textContent = "Reenviar enlace";
+  } catch (e) {
+    errEl.textContent = friendlyAuthError(e.code);
+    show(errEl);
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 // ── Load meditations ──────────────────────────────────────────────────────────
@@ -76,9 +121,7 @@ async function loadMeditations() {
       return;
     }
     listEl.innerHTML = "";
-    snap.forEach(docSnap => {
-      listEl.appendChild(buildCard(docSnap.id, docSnap.data()));
-    });
+    snap.forEach(docSnap => listEl.appendChild(buildCard(docSnap.id, docSnap.data())));
   } catch (e) {
     listEl.innerHTML = `<div class="loading" style="color:var(--error)">Error al cargar: ${e.message}</div>`;
   }
@@ -87,6 +130,8 @@ async function loadMeditations() {
 function buildCard(id, data) {
   const card = document.createElement("div");
   card.className = "med-card";
+  card.dataset.id = id;
+  card.setAttribute("draggable", "true");
 
   const halo = data.haloColor || "#9890B8";
   const mins = Math.round((data.durationSeconds || 0) / 60);
@@ -95,6 +140,7 @@ function buildCard(id, data) {
     : `<span style="background:#f3e5f5;color:#7b1fa2;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">Premium</span>`;
 
   card.innerHTML = `
+    <div class="drag-handle" title="Arrastrar para reordenar">⠿ ⠿</div>
     <div class="med-card-image">
       ${data.imageUrl
         ? `<img src="${data.imageUrl}" alt="${data.title}" />`
@@ -111,35 +157,106 @@ function buildCard(id, data) {
       </div>
     </div>
     <div class="med-card-actions">
-      <button class="btn-ghost btn-sm edit-btn" data-id="${id}">Editar</button>
-      <button class="btn-ghost btn-sm delete-btn" data-id="${id}" data-title="${data.title || ""}">Eliminar</button>
+      <button class="btn-ghost btn-sm edit-btn">Editar</button>
+      <button class="btn-ghost btn-sm delete-btn">Eliminar</button>
     </div>
   `;
 
-  card.querySelector(".edit-btn").addEventListener("click", () => openModal(id, data));
+  const handle = card.querySelector(".drag-handle");
+  handle.addEventListener("mousedown", () => { dragFromHandle = true; });
+  handle.addEventListener("mouseup",   () => { dragFromHandle = false; });
+
+  card.addEventListener("dragstart",  onDragStart);
+  card.addEventListener("dragover",   onDragOver);
+  card.addEventListener("dragleave",  onDragLeave);
+  card.addEventListener("drop",       onDrop);
+  card.addEventListener("dragend",    onDragEnd);
+
+  card.querySelector(".edit-btn").addEventListener("click",   () => openModal(id, data));
   card.querySelector(".delete-btn").addEventListener("click", () => confirmDelete(id, data.title));
   return card;
 }
 
+// ── Drag & drop reorder ───────────────────────────────────────────────────────
+function onDragStart(e) {
+  if (!dragFromHandle) { e.preventDefault(); return; }
+  draggedEl = e.currentTarget;
+  e.dataTransfer.effectAllowed = "move";
+  setTimeout(() => draggedEl?.classList.add("dragging"), 0);
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  if (!draggedEl) return;
+  const target = e.currentTarget;
+  if (target === draggedEl) return;
+  document.querySelectorAll(".med-card.drag-over").forEach(el => el.classList.remove("drag-over"));
+  target.classList.add("drag-over");
+}
+
+function onDragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget)) {
+    e.currentTarget.classList.remove("drag-over");
+  }
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  const target = e.currentTarget;
+  target.classList.remove("drag-over");
+  if (!draggedEl || target === draggedEl) return;
+
+  const list    = document.getElementById("meditation-list");
+  const cards   = [...list.querySelectorAll(".med-card")];
+  const fromIdx = cards.indexOf(draggedEl);
+  const toIdx   = cards.indexOf(target);
+
+  if (fromIdx < toIdx) {
+    target.after(draggedEl);
+  } else {
+    target.before(draggedEl);
+  }
+
+  saveNewOrder();
+}
+
+function onDragEnd() {
+  draggedEl?.classList.remove("dragging");
+  document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+  draggedEl      = null;
+  dragFromHandle = false;
+}
+
+async function saveNewOrder() {
+  const cards = [...document.querySelectorAll("#meditation-list .med-card")];
+  const batch = writeBatch(db);
+  cards.forEach((card, idx) => {
+    batch.update(doc(db, "meditations", card.dataset.id), { order: idx + 1 });
+  });
+  try {
+    await batch.commit();
+  } catch (e) {
+    console.error("Error al guardar el orden:", e);
+  }
+}
+
 // ── Modal ─────────────────────────────────────────────────────────────────────
-document.getElementById("new-btn").addEventListener("click", () => openModal(null, null));
+document.getElementById("new-btn").addEventListener("click",    () => openModal(null, null));
 document.getElementById("modal-close").addEventListener("click", closeModal);
-document.getElementById("cancel-btn").addEventListener("click", closeModal);
+document.getElementById("cancel-btn").addEventListener("click",  closeModal);
 
 function openModal(id, data) {
-  editingId = id;
+  editingId        = id;
   uploadedImageUrl = data?.imageUrl || null;
   uploadedAudioUrl = data?.audioUrl || null;
 
   document.getElementById("modal-title").textContent = id ? "Editar meditación" : "Nueva meditación";
-  document.getElementById("save-text").textContent   = id ? "Guardar cambios" : "Publicar meditación";
+  document.getElementById("save-text").textContent   = id ? "Guardar cambios"   : "Publicar meditación";
 
-  // Populate fields
-  document.getElementById("f-title").value       = data?.title || "";
+  document.getElementById("f-title").value       = data?.title       || "";
   document.getElementById("f-description").value = data?.description || "";
-  document.getElementById("f-category").value    = data?.category || "";
+  document.getElementById("f-category").value    = data?.category    || "";
   document.getElementById("f-duration").value    = data?.durationSeconds || "";
-  document.getElementById("f-order").value       = data?.order || "";
 
   const halo = data?.haloColor || "#9890B8";
   document.getElementById("f-halo-color").value = halo;
@@ -149,7 +266,6 @@ function openModal(id, data) {
     s.classList.toggle("active", s.dataset.color === halo)
   );
 
-  // Reset file zones
   resetDropZone("image", data?.imageUrl || null);
   resetDropZone("audio", data?.audioUrl || null);
 
@@ -161,7 +277,7 @@ function openModal(id, data) {
 
 function closeModal() {
   hide("modal-overlay");
-  editingId = null;
+  editingId        = null;
   uploadedImageUrl = null;
   uploadedAudioUrl = null;
 }
@@ -195,7 +311,6 @@ document.getElementById("save-btn").addEventListener("click", async () => {
   const description = document.getElementById("f-description").value.trim();
   const category    = document.getElementById("f-category").value.trim();
   const durationRaw = document.getElementById("f-duration").value;
-  const orderRaw    = document.getElementById("f-order").value;
   const haloColor   = document.getElementById("f-halo-color").value;
   const imageFile   = document.getElementById("f-image").files[0];
   const audioFile   = document.getElementById("f-audio").files[0];
@@ -211,12 +326,9 @@ document.getElementById("save-btn").addEventListener("click", async () => {
   setSaving(true);
 
   try {
-    // Upload image if new file selected
     if (imageFile) {
       uploadedImageUrl = await uploadFile(imageFile, `meditations/images/${Date.now()}_${imageFile.name}`, "image");
     }
-
-    // Upload audio if new file selected
     if (audioFile) {
       uploadedAudioUrl = await uploadFile(audioFile, `meditations/audio/${Date.now()}_${audioFile.name}`, "audio");
     }
@@ -226,7 +338,6 @@ document.getElementById("save-btn").addEventListener("click", async () => {
       description,
       category,
       durationSeconds: durationRaw ? parseInt(durationRaw) : 0,
-      order:           orderRaw    ? parseInt(orderRaw)    : 99,
       haloColor,
       imageUrl: uploadedImageUrl || "",
       audioUrl: uploadedAudioUrl || "",
@@ -236,6 +347,8 @@ document.getElementById("save-btn").addEventListener("click", async () => {
     if (editingId) {
       await updateDoc(doc(db, "meditations", editingId), payload);
     } else {
+      const cardCount = document.querySelectorAll("#meditation-list .med-card").length;
+      payload.order     = cardCount + 1;
       payload.createdAt = serverTimestamp();
       await addDoc(collection(db, "meditations"), payload);
     }
@@ -271,7 +384,7 @@ function uploadFile(file, path, type) {
     task.on("state_changed",
       snap => {
         const pct = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
-        bar.style.width = pct + "%";
+        bar.style.width   = pct + "%";
         label.textContent = pct + "%";
       },
       reject,
@@ -280,7 +393,6 @@ function uploadFile(file, path, type) {
         const urlDisp = document.getElementById(`${type}-url-display`);
         urlDisp.textContent = "✓ Subido correctamente";
         show(urlDisp);
-        // Show audio duration
         if (type === "audio") {
           const dur = await getAudioDuration(file);
           if (dur) document.getElementById("f-duration").value = Math.round(dur);
@@ -353,7 +465,7 @@ function updateHaloPreview(color) {
   document.getElementById("halo-preview").style.setProperty("--preview-halo", color);
 }
 
-// ── Drag & drop ───────────────────────────────────────────────────────────────
+// ── File drop zones ───────────────────────────────────────────────────────────
 ["image-drop", "audio-drop"].forEach(id => {
   const zone = document.getElementById(id);
   zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag-over"); });
@@ -372,7 +484,6 @@ function updateHaloPreview(color) {
   });
 });
 
-// Auto-read duration when audio is selected
 document.getElementById("f-audio").addEventListener("change", async e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -382,7 +493,6 @@ document.getElementById("f-audio").addEventListener("change", async e => {
   if (dur) document.getElementById("f-duration").value = Math.round(dur);
 });
 
-// Image preview when selected
 document.getElementById("f-image").addEventListener("change", e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -405,11 +515,12 @@ function truncate(str, n) {
 }
 function friendlyAuthError(code) {
   const map = {
-    "auth/invalid-email":      "El correo no es válido.",
-    "auth/user-not-found":     "No existe una cuenta con ese correo.",
-    "auth/wrong-password":     "Contraseña incorrecta.",
-    "auth/invalid-credential": "Credenciales incorrectas.",
-    "auth/too-many-requests":  "Demasiados intentos. Intentá más tarde.",
+    "auth/invalid-email":       "El correo no es válido.",
+    "auth/user-not-found":      "No existe una cuenta con ese correo.",
+    "auth/wrong-password":      "Contraseña incorrecta.",
+    "auth/invalid-credential":  "Email o contraseña incorrectos.",
+    "auth/too-many-requests":   "Demasiados intentos. Intentá más tarde.",
+    "auth/user-disabled":       "Esta cuenta fue deshabilitada.",
   };
-  return map[code] || "Error al iniciar sesión. Verificá tus datos.";
+  return map[code] || `Error (${code}).`;
 }

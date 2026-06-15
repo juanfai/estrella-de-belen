@@ -14,16 +14,34 @@
       <div class="star">✦</div>
       <h1>Estrella de Belén</h1>
       <p class="subtitle">Panel de administración</p>
-      <div class="form-group">
-        <label>Correo electrónico</label>
-        <input id="login-email" type="email" placeholder="admin@ejemplo.com" />
+
+      <!-- State: sign in -->
+      <div id="login-form-state">
+        <div class="form-group">
+          <label>Correo electrónico</label>
+          <input id="login-email" type="email" placeholder="admin@ejemplo.com" />
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input id="login-password" type="password" placeholder="••••••••" />
+        </div>
+        <div id="login-error" class="error-msg hidden"></div>
+        <button id="login-btn" class="btn-primary full-width">Ingresar</button>
+        <button id="forgot-link" class="btn-text-center">¿Olvidaste tu contraseña?</button>
       </div>
-      <div class="form-group">
-        <label>Contraseña</label>
-        <input id="login-password" type="password" placeholder="••••••••" />
+
+      <!-- State: forgot password -->
+      <div id="login-forgot-state" class="hidden">
+        <p class="forgot-body">Ingresá tu email y te enviamos un enlace para restablecer tu contraseña.</p>
+        <div class="form-group">
+          <label>Correo electrónico</label>
+          <input id="reset-email" type="email" placeholder="admin@ejemplo.com" />
+        </div>
+        <div id="reset-success" class="success-msg hidden">¡Listo! Revisá tu email y la carpeta de spam.</div>
+        <div id="reset-error" class="error-msg hidden"></div>
+        <button id="reset-btn" class="btn-primary full-width">Enviar enlace</button>
+        <button id="back-to-login" class="btn-text-center">Volver al inicio de sesión</button>
       </div>
-      <div id="login-error" class="error-msg hidden"></div>
-      <button id="login-btn" class="btn-primary full-width">Ingresar</button>
     </div>
   </div>
 
@@ -45,6 +63,7 @@
         <h2>Meditaciones</h2>
         <button id="new-btn" class="btn-primary">+ Nueva meditación</button>
       </div>
+      <p class="drag-hint">Arrastrá las cards para cambiar el orden</p>
 
       <div id="meditation-list" class="card-grid">
         <div class="loading">Cargando...</div>
@@ -78,15 +97,9 @@
           <textarea id="f-description" rows="3" placeholder="Una breve descripción de la meditación..."></textarea>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Duración (segundos)</label>
-            <input id="f-duration" type="number" placeholder="Se detecta del audio" min="0" />
-          </div>
-          <div class="form-group">
-            <label>Orden en el catálogo</label>
-            <input id="f-order" type="number" placeholder="1" min="1" />
-          </div>
+        <div class="form-group">
+          <label>Duración (segundos)</label>
+          <input id="f-duration" type="number" placeholder="Se detecta del audio" min="0" />
         </div>
 
         <div class="form-group" style="display:flex;align-items:center;gap:10px;padding:4px 0">

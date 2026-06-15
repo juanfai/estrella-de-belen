@@ -32,6 +32,7 @@ html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; backgrou
 .star { font-size: 40px; color: var(--primary); text-align: center; }
 .login-card h1 { text-align: center; font-size: 22px; font-weight: 400; }
 .subtitle { text-align: center; color: var(--subtext); font-size: 13px; margin-top: -8px; }
+#login-form-state, #login-forgot-state { display: flex; flex-direction: column; gap: 16px; }
 
 /* ── Header ──────────────────────────────────────────────────────────────── */
 header { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
@@ -194,6 +195,48 @@ input[type="color"] { width: 36px; height: 36px; border: none; border-radius: 8p
 .btn-icon:hover { color: var(--text); }
 
 .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+/* ── Login: forgot password state ────────────────────────────────────────── */
+.forgot-body { font-size: 13px; color: var(--subtext); line-height: 1.5; }
+.btn-text-center {
+  background: none; border: none; color: var(--subtext); font-size: 13px;
+  cursor: pointer; width: 100%; text-align: center; padding: 6px 0;
+  transition: color .2s;
+}
+.btn-text-center:hover { color: var(--text); }
+.success-msg {
+  color: var(--accent); font-size: 13px; padding: 8px 12px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 8px;
+}
+
+/* ── Card list: drag hint ────────────────────────────────────────────────── */
+.drag-hint { font-size: 12px; color: var(--subtext); margin-bottom: 16px; margin-top: -8px; }
+
+/* ── Drag handle ─────────────────────────────────────────────────────────── */
+.drag-handle {
+  padding: 6px 16px 2px;
+  color: var(--border);
+  cursor: grab;
+  font-size: 16px;
+  letter-spacing: 4px;
+  transition: color .2s;
+  user-select: none;
+  text-align: center;
+}
+.med-card:hover .drag-handle { color: var(--subtext); }
+
+/* ── Card drag states ────────────────────────────────────────────────────── */
+.med-card.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+.med-card.drag-over {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  transform: scale(1.01);
+  transition: transform .1s;
+}
 
 /* ── Misc ────────────────────────────────────────────────────────────────── */
 .error-msg { color: var(--error); font-size: 13px; padding: 8px 12px; background: color-mix(in srgb, var(--error) 12%, transparent); border-radius: 8px; }

@@ -5,15 +5,14 @@
 
     <!-- Auth -->
     <string name="auth_email">Correo electrónico</string>
-    <string name="auth_email_hint">Ingresá tu email para acceder</string>
-    <string name="auth_send_link">Enviar enlace</string>
-    <string name="auth_check_email_title">Revisá tu email</string>
-    <string name="auth_check_email_body">Te enviamos un enlace de acceso a</string>
-    <string name="auth_check_email_hint">Hacé click en el botón del email para entrar a la app. El enlace expira en 1 hora.</string>
-    <string name="auth_resend_link">Reenviar enlace</string>
-    <string name="auth_change_email">Cambiar email</string>
-    <string name="auth_link_sent">¡Enlace enviado!</string>
-    <string name="auth_invalid_link">El enlace es inválido o ya expiró</string>
+    <string name="auth_password">Contraseña</string>
+    <string name="auth_email_hint">Accedé a tu cuenta</string>
+    <string name="auth_sign_in">Ingresar</string>
+    <string name="auth_forgot_password">¿Olvidaste tu contraseña?</string>
+    <string name="auth_reset_title">Recuperar contraseña</string>
+    <string name="auth_reset_body">Ingresá tu email y te enviamos un enlace para restablecer tu contraseña.</string>
+    <string name="auth_reset_send">Enviar enlace</string>
+    <string name="auth_reset_success">¡Listo! Revisá tu email y la carpeta de spam.</string>
 
     <!-- Home -->
     <string name="home_subtitle">¿Qué necesitás hoy?</string>

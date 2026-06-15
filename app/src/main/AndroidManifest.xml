@@ -31,19 +31,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- App Links: intercepts the email sign-in link so the OS opens
-                 the app instead of the browser.
-                 Firebase auto-manages assetlinks.json at firebaseapp.com once
-                 the SHA-256 fingerprint is registered in Firebase Console →
-                 Project settings → Android app → Add fingerprint. -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="estrella-de-belen-85a2b.firebaseapp.com" />
-            </intent-filter>
         </activity>
 
         <service

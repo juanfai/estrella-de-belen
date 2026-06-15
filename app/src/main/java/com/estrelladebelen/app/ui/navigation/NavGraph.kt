@@ -20,12 +20,10 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import com.estrelladebelen.app.R
-import com.estrelladebelen.app.data.repository.AppContainer
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.estrelladebelen.app.ui.screens.SplashScreen
 import com.estrelladebelen.app.ui.screens.auth.AuthViewModel
-import com.estrelladebelen.app.ui.screens.auth.CheckEmailScreen
 import com.estrelladebelen.app.ui.screens.auth.LoginScreen
 import com.estrelladebelen.app.ui.screens.home.HomeScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerScreen
@@ -57,24 +55,6 @@ fun AppNavGraph() {
 
     val showBottomBar = currentRoute in listOf(Screen.Home.route, Screen.Profile.route)
 
-    // React to email link arriving from MainActivity via pendingEmailLink StateFlow.
-    val pendingLink by AppContainer.userRepository.pendingEmailLink.collectAsState()
-    LaunchedEffect(pendingLink) {
-        pendingLink?.let { link ->
-            authViewModel.handleEmailLink(link)
-            AppContainer.userRepository.updatePendingEmailLink(null)
-        }
-    }
-
-    // Navigate to CheckEmail right after the link is sent.
-    LaunchedEffect(authUiState.linkSent) {
-        if (authUiState.linkSent) {
-            navController.navigate(Screen.CheckEmail.route)
-            authViewModel.clearLinkSent()
-        }
-    }
-
-    // Navigate to Home when sign-in via email link completes.
     LaunchedEffect(authUiState.isAuthenticated) {
         if (authUiState.isAuthenticated) {
             navController.navigate(Screen.Home.route) {
@@ -112,9 +92,6 @@ fun AppNavGraph() {
             }
         }
     ) { innerPadding ->
-        // PlayerScreen draws edge-to-edge (pure black + GL animation).
-        // Passing the Scaffold inset padding would expose the theme background
-        // as colored strips at top and bottom in light mode.
         val effectivePadding = if (currentRoute == Screen.Player.route)
             PaddingValues(0.dp)
         else
@@ -147,15 +124,6 @@ fun AppNavGraph() {
 
             composable(Screen.Login.route) {
                 LoginScreen(viewModel = authViewModel)
-            }
-
-            composable(Screen.CheckEmail.route) {
-                CheckEmailScreen(
-                    email = authUiState.sentEmail,
-                    onResend = { authViewModel.sendSignInLink(authUiState.sentEmail) },
-                    onChangeEmail = { navController.popBackStack() },
-                    viewModel = authViewModel
-                )
             }
 
             composable(Screen.Home.route) {
