@@ -11,6 +11,8 @@ interface MeditationRepository {
     suspend fun isDownloaded(id: String): Boolean
     suspend fun saveDownload(meditation: Meditation, localPath: String)
     suspend fun removeDownload(id: String)
+    suspend fun getNonFreeDownloads(): List<DownloadedMeditation>
+    suspend fun deleteNonFreeDownloads()
 }
 
 // Stub implementation with sample data — replaced by FirebaseMeditationRepository
@@ -93,4 +95,6 @@ class MeditationRepositoryStub : MeditationRepository {
     override suspend fun isDownloaded(id: String): Boolean = false
     override suspend fun saveDownload(meditation: Meditation, localPath: String) {}
     override suspend fun removeDownload(id: String) {}
+    override suspend fun getNonFreeDownloads(): List<DownloadedMeditation> = emptyList()
+    override suspend fun deleteNonFreeDownloads() {}
 }

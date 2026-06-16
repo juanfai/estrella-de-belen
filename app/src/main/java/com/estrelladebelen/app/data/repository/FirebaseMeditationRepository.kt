@@ -34,17 +34,25 @@ class FirebaseMeditationRepository(
     override suspend fun saveDownload(meditation: Meditation, localPath: String) {
         dao.insert(
             DownloadedMeditation(
-                meditationId  = meditation.id,
-                title         = meditation.title,
+                meditationId    = meditation.id,
+                title           = meditation.title,
                 durationSeconds = meditation.durationSeconds,
-                localFilePath = localPath,
-                haloColor     = meditation.haloColor
+                localFilePath   = localPath,
+                haloColor       = meditation.haloColor,
+                isFree          = meditation.isFree
             )
         )
     }
 
     override suspend fun removeDownload(id: String) {
         dao.deleteById(id)
+    }
+
+    override suspend fun getNonFreeDownloads(): List<DownloadedMeditation> =
+        dao.getNonFreeDownloads()
+
+    override suspend fun deleteNonFreeDownloads() {
+        dao.deleteNonFreeDownloads()
     }
 
     private fun com.google.firebase.firestore.DocumentSnapshot.toMeditation(): Meditation? {

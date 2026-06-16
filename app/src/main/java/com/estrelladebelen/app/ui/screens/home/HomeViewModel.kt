@@ -1,7 +1,8 @@
 package com.estrelladebelen.app.ui.screens.home
 
+import android.app.Application
 import android.content.Context
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.estrelladebelen.app.data.model.Meditation
 import com.estrelladebelen.app.data.repository.AppContainer
@@ -28,7 +29,7 @@ data class HomeUiState(
     val isSubscribed: Boolean = false
 )
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: MeditationRepository = AppContainer.meditationRepository
     private val subscriptionRepo = AppContainer.subscriptionRepository
@@ -46,9 +47,24 @@ class HomeViewModel : ViewModel() {
 
     private fun observeSubscription() {
         viewModelScope.launch {
+            var previouslySubscribed: Boolean? = null
             subscriptionRepo.isSubscribed.collect { subscribed ->
                 _uiState.value = _uiState.value.copy(isSubscribed = subscribed)
+                val justRevoked = previouslySubscribed == true && !subscribed
+                val notSubscribedOnStart = previouslySubscribed == null && !subscribed
+                if (justRevoked || notSubscribedOnStart) {
+                    revokeNonFreeDownloads()
+                }
+                previouslySubscribed = subscribed
             }
+        }
+    }
+
+    private fun revokeNonFreeDownloads() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val toDelete = repository.getNonFreeDownloads()
+            toDelete.forEach { File(it.localFilePath).delete() }
+            repository.deleteNonFreeDownloads()
         }
     }
 

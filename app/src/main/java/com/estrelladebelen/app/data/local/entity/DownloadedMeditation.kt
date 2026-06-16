@@ -10,5 +10,6 @@ data class DownloadedMeditation(
     val durationSeconds: Int,
     val localFilePath: String,
     val haloColor: String,
+    val isFree: Boolean = true,
     val downloadedAt: Long = System.currentTimeMillis()
 )

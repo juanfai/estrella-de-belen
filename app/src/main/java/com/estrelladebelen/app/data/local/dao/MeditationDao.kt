@@ -20,4 +20,10 @@ interface MeditationDao {
 
     @Query("DELETE FROM downloaded_meditations WHERE meditationId = :id")
     suspend fun deleteById(id: String)
+
+    @Query("SELECT * FROM downloaded_meditations WHERE isFree = 0")
+    suspend fun getNonFreeDownloads(): List<DownloadedMeditation>
+
+    @Query("DELETE FROM downloaded_meditations WHERE isFree = 0")
+    suspend fun deleteNonFreeDownloads()
 }
