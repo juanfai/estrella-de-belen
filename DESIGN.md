@@ -99,7 +99,7 @@ Bottom Nav (2 tabs)
 ## Screens
 
 ### SplashScreen
-- Logo (`logo.xml` VectorDrawable, Moonbeam color `#FF8750`) on dark background, fade-in animation
+- Logo (`logo_luz.png`, 220dp) on dark background, fade-in animation
 - Checks for active session
 - Redirects to Login or Home
 
@@ -108,7 +108,7 @@ Bottom Nav (2 tabs)
 - Botón "Ingresar" → `AuthViewModel.signIn(email, password)`
 - Botón "Continuar con Google" (OutlinedButton con logo `ic_google.xml`) → lanza `GoogleSignInClient.signInIntent` via `rememberLauncherForActivityResult`, pasa el `idToken` a `AuthViewModel.signInWithGoogle(idToken)`
 - Link "¿Olvidaste tu contraseña?" → abre `AlertDialog` con campo email y botón "Enviar enlace" → `AuthViewModel.sendPasswordReset(email)`; tras el envío muestra mensaje de éxito en verde
-- Logo VectorDrawable `logo.xml` a 72dp
+- Logo `logo_luz.png` a 110dp
 - Soft dark aesthetic (background `#1A1025`) for visual continuity with the animation
 
 ### HomeScreen
@@ -131,12 +131,13 @@ Bottom Nav (2 tabs)
 - **Edge-to-edge fix:** NavGraph computa `effectivePadding = PaddingValues(0.dp)` cuando `currentRoute == Screen.Player.route`, evitando que el `innerPadding` del Scaffold deje franjas claras arriba/abajo en modo light
 
 ### ProfileScreen
-- Avatar with user initials
+- Avatar clickeable → abre el picker de imágenes → sube a Firebase Storage (`profile_photos/{uid}.jpg`) → guarda URL en Firestore (`users/{uid}.photoUrl`). Muestra spinner durante la subida; carga la foto con Coil. Fallback: iniciales del usuario.
 - Name and email
 - Stats: total sessions, total time, day streak (🔥)
 - Access to: Favorites, Downloaded (offline)
-- Settings: daily reminder (on/off + time), language selector (UI ready, disabled until a second language is available), theme (light/dark)
+- Settings: daily reminder (on/off + time), language selector (UI ready, disabled until a second language is available)
 - Log out
+- **Dark mode is always on** — toggle removed; `MainActivity` hardcodes `darkTheme = true`
 
 ---
 
@@ -147,7 +148,8 @@ Bottom Nav (2 tabs)
 - Not accessible from the file explorer or other apps
 - Firebase Storage rules require authentication — no access without login
 - Animation always generated in real time (no video stored)
-- Room DB (`DownloadedMeditation`) keeps the index of downloaded files
+- Room DB (`DownloadedMeditation`) keeps the index of downloaded files; includes `isFree` field
+- **Subscription revocation**: when `isSubscribed` becomes `false`, `HomeViewModel` automatically deletes all non-free downloaded files from disk and removes them from Room DB. Runs on every app launch if not subscribed.
 
 ### Daily reminder
 - WorkManager `PeriodicWorkRequest` (1-day interval) schedules a local notification
@@ -158,10 +160,7 @@ Bottom Nav (2 tabs)
 - `ReminderScheduler` uses `ExistingPeriodicWorkPolicy.UPDATE` — cambiar la hora cancela y reprograma
 
 ### Light / Dark mode
-- `AppThemeViewModel` (AndroidViewModel) holds `isDark: StateFlow<Boolean>`, persisted in SharedPreferences
-- Default: dark
-- `MainActivity` observes it and passes `darkTheme` to `EstrellaDeBelénTheme`; all screens react instantly
-- Toggle en Profile → Settings (icono luna/sol); usa `viewModel(LocalContext.current as ComponentActivity)` para compartir la misma instancia que `MainActivity`
+- **Always dark.** `MainActivity` hardcodes `darkTheme = true`. `AppThemeViewModel` and `ThemePreferenceStore` remain in the codebase but are unused — kept for easy reactivation if needed.
 
 ### "New" badge
 - `Meditation.isNew` computed: `createdAt < 7 days ago`
@@ -180,6 +179,7 @@ Hosted on Firebase Hosting (`estrella-de-belen-85a2b` site) — plain HTML + Fir
 - Email/password login + Google Sign-In (`signInWithPopup`) — sólo usuarios con custom claim `admin:true` pueden acceder
 - Verificación del claim en `onAuthStateChanged`: si el token no tiene `admin:true`, se hace `signOut()` inmediato y se muestra error
 - "¿Olvidaste tu contraseña?" → `sendPasswordResetEmail` con mensaje de éxito inline
+- Logo `logo_luz.png` en el login (160px); fondo de la login-card `#101417`
 - Lista de meditaciones ordenada por campo `order`
 - **Reordenamiento drag & drop**: cada card tiene un handle `⠿ ⠿`; al soltar, se ejecuta un `writeBatch` que reescribe el campo `order` (1, 2, 3…) de todos los documentos afectados. El campo numérico de orden fue eliminado del formulario.
 - Nuevas meditaciones se agregan al final (`order = cardCount + 1`) automáticamente
@@ -191,6 +191,7 @@ Hosted on Firebase Hosting (`estrella-de-belen-85a2b` site) — plain HTML + Fir
 - Checkbox `isFree` (libre sin suscripción)
 - Guarda `createdAt` server timestamp en docs nuevos
 - Mensajes de error de auth en español
+- Badges de texto en las cards: **"Gratis"** (verde) y **"Premium"** (azul `#246489`) en la fila de metadata
 
 **Deploy:**
 ```bash
@@ -365,7 +366,7 @@ En RevenueCat se agrupan bajo un **Entitlement** llamado `premium`.
 - Estrategia: campo `isFree: Boolean` en cada documento de `meditations/` en Firestore
 - El admin puede marcarlo desde el web panel (checkbox en el form)
 - Al lanzar: **1 sola meditación gratuita**
-- Las demás muestran un overlay con badge "✦ Premium" en la card
+- Las demás muestran un overlay oscuro (35% black) sobre toda la card + badge bookmark (`ic_bookmark.xml`, azul `#7fd8f8`, 28dp) en la esquina superior derecha
 
 ### Cambios al data model
 
@@ -375,6 +376,10 @@ meditations/{id}
 
 users/{uid}
   + subscriptionStatus: String   // "free" | "active"
+  + photoUrl: String             // URL de foto de perfil (Firebase Storage)
+
+DownloadedMeditation (Room)
+  + isFree: Boolean     // copiado de Meditation al descargar; usado para revocación
 ```
 
 `subscriptionStatus` es un caché local sincronizado desde RevenueCat al abrir la app. La fuente de verdad es RevenueCat.
@@ -404,7 +409,22 @@ PaywallScreen
 match /meditations/{id} {
   allow read: if request.auth != null;
   allow update: if request.auth.token.admin == true;
-  // isFree solo escribible por admin (ya cubierto por la regla de arriba)
+}
+```
+
+### Firebase Storage rules (actuales)
+
+```
+match /meditations/{allPaths=**} {
+  allow read;
+  allow write: if request.auth != null;
+}
+match /audio/{allPaths=**} {
+  allow read, write: if request.auth != null;
+}
+match /profile_photos/{uid} {
+  allow read;
+  allow write: if request.auth != null && request.auth.uid == uid;
 }
 ```
 
@@ -419,7 +439,7 @@ match /meditations/{id} {
 | `isFree` en modelo `Meditation` + Firestore | ✅ Done |
 | `subscriptionStatus` en `UserProfile` | ✅ Done |
 | Checkbox `isFree` en web admin panel | ✅ Done |
-| Overlay premium en `MeditationCard` | ✅ Done |
+| Overlay premium en `MeditationCard` (35% black + bookmark badge) | ✅ Done |
 | `PaywallScreen` (UI + RevenueCat purchase flow) | ✅ Done (stub — muestra "Próximamente") |
 | Fila "Suscripción" en SettingsScreen | ✅ Done |
 | `SubscriptionRepository` (RevenueCat SDK) | ✅ Done (interfaz + StubSubscriptionRepository) |
@@ -432,15 +452,17 @@ match /meditations/{id} {
 | Area | Status |
 |---|---|
 | Android app skeleton (package rename, DI, build) | ✅ Done |
-| Color palette + Theme (light + dark) | ✅ Done |
-| Light/Dark mode toggle (Profile → Settings, persisted) | ✅ Done |
+| Color palette + Theme (dark only) | ✅ Done |
+| Light/Dark mode toggle | ❌ Removed — always dark |
 | Navigation graph (Splash → Login/Register → Home/Player/Profile) | ✅ Done |
 | Data model (`Meditation`, `UserProfile`) | ✅ Done |
 | Firestore repositories (`FirebaseMeditationRepository`, `FirebaseUserRepository`) | ✅ Done |
 | Room DB (`DownloadedMeditation`, `MeditationDao`, `AppDatabase`) | ✅ Done |
 | Auth — Email + Password (`signInWithEmailAndPassword`, `sendPasswordResetEmail`) | ✅ Done |
 | Auth — Google Sign-In (`play-services-auth` + `GoogleAuthProvider`) | ✅ Done |
-| SplashScreen (logo VectorDrawable Moonbeam) | ✅ Done |
+| SplashScreen (logo_luz.png, 220dp) | ✅ Done |
+| Profile photo upload (Storage + Firestore) | ✅ Done |
+| Subscription revocation → auto-delete premium downloads | ✅ Done |
 | HomeScreen + HomeViewModel | ✅ Done |
 | PlayerScreen + PlayerViewModel (glow, controls, keep-screen-on) | ✅ Done |
 | MediaPlaybackService (MediaSessionService + ExoPlayer) | ✅ Done |
