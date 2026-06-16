@@ -77,6 +77,17 @@ fun MeditationCard(
                             )
                         }
                     }
+
+                    Text(
+                        text = stringResource(R.string.card_duration, meditation.durationMinutes),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFCCCCCC),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(6.dp)
+                            .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
                 }
 
             Column(modifier = Modifier.padding(12.dp)) {
@@ -88,29 +99,18 @@ fun MeditationCard(
                     maxLines = 2
                 )
                 Spacer(Modifier.height(4.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (meditation.category.isNotBlank()) {
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = MaterialTheme.colorScheme.tertiaryContainer
-                        ) {
-                            Text(
-                                text = meditation.category,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
+                if (meditation.category.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.tertiaryContainer
+                    ) {
+                        Text(
+                            text = meditation.category,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
                     }
-                    Text(
-                        text = stringResource(R.string.card_duration, meditation.durationMinutes),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
 
                 if (!isPremiumLocked) {
