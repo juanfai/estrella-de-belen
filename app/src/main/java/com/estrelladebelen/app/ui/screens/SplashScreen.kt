@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -100,9 +101,12 @@ private fun randomSpark(maxDist: Float): Spark {
 @Composable
 private fun StarfieldBackground() {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val density = LocalDensity.current
         val w = constraints.maxWidth.toFloat()
         val h = constraints.maxHeight.toFloat()
         val maxDist = sqrt(w * w / 4f + h * h / 4f) * 1.1f
+        // El logo es el top de la Column centrada; su centro está ~40dp arriba del centro de pantalla
+        val originOffsetY = with(density) { (-40).dp.toPx() }
 
         var sparks by remember { mutableStateOf(List(55) { randomSpark(maxDist) }) }
 
@@ -118,7 +122,7 @@ private fun StarfieldBackground() {
 
         Canvas(modifier = Modifier.fillMaxSize()) {
             val cx = size.width / 2f
-            val cy = size.height / 2f
+            val cy = size.height / 2f + originOffsetY
 
             sparks.forEach { spark ->
                 val progress = spark.distance / spark.maxDistance
