@@ -4,6 +4,8 @@ import com.estrelladebelen.app.ui.theme.EstrellaDeBelénTheme
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -36,14 +38,15 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     HomeScreenContent(
-        uiState           = uiState,
-        userName          = userName,
-        favorites         = favorites,
-        onMeditationClick = onMeditationClick,
-        onFavoriteClick   = onFavoriteClick,
-        onDownloadClick   = { id -> viewModel.downloadMeditation(context, id) },
-        onFilterSelected  = viewModel::setFilter,
-        onPaywallClick    = onPaywallClick
+        uiState            = uiState,
+        userName           = userName,
+        favorites          = favorites,
+        onMeditationClick  = onMeditationClick,
+        onFavoriteClick    = onFavoriteClick,
+        onDownloadClick    = { id -> viewModel.downloadMeditation(context, id) },
+        onFilterSelected   = viewModel::setFilter,
+        onCategorySelected = viewModel::setCategory,
+        onPaywallClick     = onPaywallClick
     )
 }
 
@@ -56,6 +59,7 @@ private fun HomeScreenContent(
     onFavoriteClick: (String) -> Unit,
     onDownloadClick: (String) -> Unit,
     onFilterSelected: (DurationFilter) -> Unit,
+    onCategorySelected: (String?) -> Unit,
     onPaywallClick: () -> Unit
 ) {
     LazyVerticalGrid(
@@ -96,11 +100,20 @@ private fun HomeScreenContent(
         }
 
         item(span = { GridItemSpan(2) }) {
-            DurationFilterRow(
-                activeFilter = uiState.activeFilter,
-                onFilterSelected = onFilterSelected,
-                modifier = Modifier.padding(horizontal = 20.dp)
-            )
+            Column {
+                DurationFilterRow(
+                    activeFilter = uiState.activeFilter,
+                    onFilterSelected = onFilterSelected,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                if (uiState.availableCategories.isNotEmpty()) {
+                    CategoryFilterRow(
+                        categories = uiState.availableCategories,
+                        activeCategory = uiState.activeCategory,
+                        onCategorySelected = onCategorySelected
+                    )
+                }
+            }
         }
 
         if (uiState.isLoading) {
@@ -224,7 +237,7 @@ private fun DurationFilterRow(
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.padding(vertical = 8.dp)
+        modifier = modifier.padding(top = 4.dp, bottom = 0.dp)
     ) {
         DurationFilter.entries.forEach { filter ->
             val selected = activeFilter == filter
@@ -234,6 +247,52 @@ private fun DurationFilterRow(
                 label = {
                     Text(
                         text = stringResource(filter.labelRes()),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryFilterRow(
+    categories: List<String>,
+    activeCategory: String?,
+    onCategorySelected: (String?) -> Unit
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        modifier = Modifier.padding(top = 2.dp, bottom = 6.dp)
+    ) {
+        item {
+            FilterChip(
+                selected = activeCategory == null,
+                onClick = { onCategorySelected(null) },
+                label = {
+                    Text(
+                        text = stringResource(R.string.filter_all),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        }
+        items(categories) { cat ->
+            FilterChip(
+                selected = activeCategory == cat,
+                onClick = { onCategorySelected(if (activeCategory == cat) null else cat) },
+                label = {
+                    Text(
+                        text = cat.replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.labelMedium
                     )
                 },
@@ -273,12 +332,13 @@ private val previewMeditations = listOf(
 )
 
 private val previewUiState = HomeUiState(
-    isLoading   = false,
-    meditations = previewMeditations,
-    featured    = previewMeditations.first(),
-    downloads   = listOf("2"),
-    downloadingIds = setOf("3"),
-    isSubscribed = false
+    isLoading           = false,
+    meditations         = previewMeditations,
+    featured            = previewMeditations.first(),
+    downloads           = listOf("2"),
+    downloadingIds      = setOf("3"),
+    isSubscribed        = false,
+    availableCategories = listOf("paz", "sueño", "foco")
 )
 
 @Preview(showBackground = true, showSystemUi = true, name = "Home")
@@ -286,14 +346,15 @@ private val previewUiState = HomeUiState(
 private fun HomeScreenPreview() {
     EstrellaDeBelénTheme {
         HomeScreenContent(
-            uiState           = previewUiState,
-            userName          = "Juan",
-            favorites         = listOf("1"),
-            onMeditationClick = {},
-            onFavoriteClick   = {},
-            onDownloadClick   = {},
-            onFilterSelected  = {},
-            onPaywallClick    = {}
+            uiState            = previewUiState,
+            userName           = "Juan",
+            favorites          = listOf("1"),
+            onMeditationClick  = {},
+            onFavoriteClick    = {},
+            onDownloadClick    = {},
+            onFilterSelected   = {},
+            onCategorySelected = {},
+            onPaywallClick     = {}
         )
     }
 }
@@ -303,14 +364,15 @@ private fun HomeScreenPreview() {
 private fun HomeScreenLoadingPreview() {
     EstrellaDeBelénTheme {
         HomeScreenContent(
-            uiState           = HomeUiState(isLoading = true),
-            userName          = "Juan",
-            favorites         = emptyList(),
-            onMeditationClick = {},
-            onFavoriteClick   = {},
-            onDownloadClick   = {},
-            onFilterSelected  = {},
-            onPaywallClick    = {}
+            uiState            = HomeUiState(isLoading = true),
+            userName           = "Juan",
+            favorites          = emptyList(),
+            onMeditationClick  = {},
+            onFavoriteClick    = {},
+            onDownloadClick    = {},
+            onFilterSelected   = {},
+            onCategorySelected = {},
+            onPaywallClick     = {}
         )
     }
 }

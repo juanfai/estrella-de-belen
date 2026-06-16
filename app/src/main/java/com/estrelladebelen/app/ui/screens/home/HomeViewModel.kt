@@ -23,6 +23,8 @@ data class HomeUiState(
     val meditations: List<Meditation> = emptyList(),
     val featured: Meditation? = null,
     val activeFilter: DurationFilter = DurationFilter.ALL,
+    val activeCategory: String? = null,
+    val availableCategories: List<String> = emptyList(),
     val error: String? = null,
     val downloads: List<String> = emptyList(),
     val downloadingIds: Set<String> = emptySet(),
@@ -124,10 +126,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             runCatching { repository.getAll() }
                 .onSuccess { list ->
                     allMeditations = list
+                    val categories = list.map { it.category }.filter { it.isNotBlank() }.distinct()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         meditations = list,
-                        featured = list.firstOrNull { it.isFree } ?: list.firstOrNull()
+                        featured = list.firstOrNull { it.isFree } ?: list.firstOrNull(),
+                        availableCategories = categories
                     )
                 }
                 .onFailure { e ->
@@ -140,12 +144,26 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setFilter(filter: DurationFilter) {
-        val filtered = when (filter) {
+        _uiState.value = _uiState.value.copy(activeFilter = filter)
+        applyFilters()
+    }
+
+    fun setCategory(category: String?) {
+        _uiState.value = _uiState.value.copy(activeCategory = category)
+        applyFilters()
+    }
+
+    private fun applyFilters() {
+        val state = _uiState.value
+        val durationFiltered = when (state.activeFilter) {
             DurationFilter.ALL    -> allMeditations
             DurationFilter.SHORT  -> allMeditations.filter { it.durationSeconds <= 5 * 60 }
             DurationFilter.MEDIUM -> allMeditations.filter { it.durationSeconds in (5 * 60 + 1)..(10 * 60) }
             DurationFilter.LONG   -> allMeditations.filter { it.durationSeconds > 10 * 60 }
         }
-        _uiState.value = _uiState.value.copy(activeFilter = filter, meditations = filtered)
+        val filtered = state.activeCategory?.let { cat ->
+            durationFiltered.filter { it.category == cat }
+        } ?: durationFiltered
+        _uiState.value = state.copy(meditations = filtered)
     }
 }
