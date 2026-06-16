@@ -26,10 +26,10 @@ html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; backgrou
 /* ── Login ───────────────────────────────────────────────────────────────── */
 .login-card {
   width: 100%; max-width: 400px; padding: 40px;
-  background: var(--surface); border: 1px solid var(--border);
+  background: #101417; border: 1px solid var(--border);
   border-radius: 20px; display: flex; flex-direction: column; gap: 16px;
 }
-.star { font-size: 40px; color: var(--primary); text-align: center; }
+.login-logo { width: 100px; height: 100px; object-fit: contain; display: block; margin: 0 auto; }
 .login-card h1 { text-align: center; font-size: 22px; font-weight: 400; }
 .subtitle { text-align: center; color: var(--subtext); font-size: 13px; margin-top: -8px; }
 #login-form-state, #login-forgot-state { display: flex; flex-direction: column; gap: 16px; width: 100%; }
