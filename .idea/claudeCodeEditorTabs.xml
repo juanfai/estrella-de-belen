@@ -1,20 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ClaudeCodeEditorTabs">
-    <option name="activeSessionId" value="0e45be56-c646-465f-8f8b-1e4df2f019ba" />
+    <option name="activeSessionId" value="4b128b75-bac1-4241-a432-89042ffb965b" />
     <option name="openSessionIds">
       <list>
         <option value="0e45be56-c646-465f-8f8b-1e4df2f019ba" />
+        <option value="4b128b75-bac1-4241-a432-89042ffb965b" />
       </list>
     </option>
     <option name="sessionPaths">
       <map>
         <entry key="0e45be56-c646-465f-8f8b-1e4df2f019ba" value="/sessions/62fe5d9d-c577-4663-b302-32259746ef8d" />
+        <entry key="4b128b75-bac1-4241-a432-89042ffb965b" value="/sessions/e77b55e1-df16-4e7a-be73-6d0d6817067b" />
       </map>
     </option>
     <option name="sessionTitles">
       <map>
         <entry key="0e45be56-c646-465f-8f8b-1e4df2f019ba" value="no estan cargando las imagenes en la app" />
+        <entry key="4b128b75-bac1-4241-a432-89042ffb965b" value="lee el DESIGN.md para contexto ya que las meditac" />
       </map>
     </option>
   </component>

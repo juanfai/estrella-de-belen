@@ -81,7 +81,7 @@ fun MeditationCard(
                     Text(
                         text = stringResource(R.string.card_duration, meditation.durationMinutes),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFCCCCCC),
+                        color = Color(0xFF999999),
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(6.dp)
