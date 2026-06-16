@@ -12,10 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,69 +46,38 @@ fun MeditationCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-            ) {
-                if (meditation.imageUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = meditation.imageUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                if (meditation.isNew && !isPremiumLocked) {
-                    Surface(
-                        shape = RoundedCornerShape(bottomEnd = 10.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                        modifier = Modifier.align(Alignment.TopStart)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.badge_new),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        Box {
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                ) {
+                    if (meditation.imageUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = meditation.imageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
-                }
 
-                if (isPremiumLocked) {
-                    // Outer box anchors the ribbon to the top-right corner.
-                    // requiredSize on the inner box forces it wider than its parent so the
-                    // ribbon ends extend past the card edges — Card's clip cuts them cleanly.
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .align(Alignment.TopEnd),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .requiredSize(width = 90.dp, height = 26.dp)
-                                .rotate(45f)
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer)
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
+                    if (meditation.isNew && !isPremiumLocked) {
+                        Surface(
+                            shape = RoundedCornerShape(bottomEnd = 10.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            modifier = Modifier.align(Alignment.TopStart)
                         ) {
                             Text(
-                                text = "✦",
-                                modifier = Modifier.rotate(-45f),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                text = stringResource(R.string.badge_new),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
                     }
                 }
-            }
 
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
@@ -181,6 +149,24 @@ fun MeditationCard(
                         }
                     }
                 }
+            }
+            }  // cierre Column exterior
+
+            if (isPremiumLocked) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color.Black.copy(alpha = 0.35f))
+                )
+                Icon(
+                    painter = painterResource(R.drawable.ic_bookmark),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .align(Alignment.TopEnd)
+                        .offset(x = (-6).dp)
+                )
             }
         }
     }
