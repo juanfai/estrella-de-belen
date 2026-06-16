@@ -11,7 +11,9 @@ import com.estrelladebelen.app.data.repository.MeditationRepository
 import com.estrelladebelen.app.data.repository.UserRepository
 import com.estrelladebelen.app.notification.ReminderScheduler
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
@@ -30,6 +32,12 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         SharingStarted.WhileSubscribed(5_000),
         null
     )
+
+    private val _isUploadingPhoto = MutableStateFlow(false)
+    val isUploadingPhoto = _isUploadingPhoto.asStateFlow()
+
+    private val _photoUploadError = MutableStateFlow<String?>(null)
+    val photoUploadError = _photoUploadError.asStateFlow()
 
     val isSubscribed = subscriptionRepo.isSubscribed.stateIn(
         viewModelScope,
@@ -86,6 +94,17 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
+
+    fun uploadPhoto(context: android.content.Context, uri: android.net.Uri) {
+        viewModelScope.launch {
+            _isUploadingPhoto.value = true
+            runCatching { userRepo.uploadAndSavePhoto(uri, context) }
+                .onFailure { _photoUploadError.value = it.message ?: "Error al subir la foto" }
+            _isUploadingPhoto.value = false
+        }
+    }
+
+    fun clearPhotoError() { _photoUploadError.value = null }
 
     fun removeDownload(context: android.content.Context, item: DownloadedMeditation) {
         viewModelScope.launch {

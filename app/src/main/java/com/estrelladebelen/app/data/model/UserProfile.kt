@@ -11,5 +11,6 @@ data class UserProfile(
     val lastSessionDate: String = "",
     val notificationsEnabled: Boolean = false,
     val notificationTime: String = "08:00",
-    val subscriptionStatus: String = "free"
+    val subscriptionStatus: String = "free",
+    val photoUrl: String = ""
 )

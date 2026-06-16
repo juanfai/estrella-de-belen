@@ -9,6 +9,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -114,6 +115,17 @@ class FirebaseUserRepository(context: Context) : UserRepository {
         }.await()
     }
 
+    override suspend fun uploadAndSavePhoto(uri: android.net.Uri, context: android.content.Context) {
+        val uid   = auth.currentUser?.uid ?: return
+        val bytes = context.contentResolver.openInputStream(uri)?.readBytes() ?: return
+        val ref   = Firebase.storage.reference.child("profile_photos/$uid.jpg")
+        ref.putBytes(bytes).await()
+        val url = ref.downloadUrl.await().toString()
+        firestore.collection("users").document(uid)
+            .set(mapOf("photoUrl" to url), SetOptions.merge())
+            .await()
+    }
+
     override suspend fun updateNotificationSettings(enabled: Boolean, time: String) {
         val uid = auth.currentUser?.uid ?: return
         firestore.collection("users").document(uid)
@@ -147,7 +159,8 @@ class FirebaseUserRepository(context: Context) : UserRepository {
             lastSessionDate      = getString("lastSessionDate") ?: "",
             notificationsEnabled = getBoolean("notificationsEnabled") ?: false,
             notificationTime     = getString("notificationTime") ?: "08:00",
-            subscriptionStatus   = getString("subscriptionStatus") ?: "free"
+            subscriptionStatus   = getString("subscriptionStatus") ?: "free",
+            photoUrl             = getString("photoUrl") ?: ""
         )
     }
 
@@ -161,6 +174,7 @@ class FirebaseUserRepository(context: Context) : UserRepository {
         "lastSessionDate"      to lastSessionDate,
         "notificationsEnabled" to notificationsEnabled,
         "notificationTime"     to notificationTime,
-        "subscriptionStatus"   to subscriptionStatus
+        "subscriptionStatus"   to subscriptionStatus,
+        "photoUrl"             to photoUrl
     )
 }
