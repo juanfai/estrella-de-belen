@@ -16,6 +16,6 @@ object AppContainer {
         val dao = AppDatabase.getInstance(context).meditationDao()
         meditationRepository   = FirebaseMeditationRepository(dao)
         userRepository         = FirebaseUserRepository(context)
-        subscriptionRepository = StubSubscriptionRepository()
+        subscriptionRepository = RevenueCatSubscriptionRepository()
     }
 }

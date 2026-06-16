@@ -10,6 +10,9 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import com.revenuecat.purchases.Purchases
+import com.revenuecat.purchases.awaitLogIn
+import com.revenuecat.purchases.awaitLogOut
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -73,7 +76,10 @@ class FirebaseUserRepository(context: Context) : UserRepository {
             auth.sendPasswordResetEmail(email).await()
         }
 
-    override suspend fun signOut() { auth.signOut() }
+    override suspend fun signOut() {
+        runCatching { Purchases.sharedInstance.awaitLogOut() }
+        auth.signOut()
+    }
 
     override suspend fun deleteAccount(): Result<Unit> = runCatching {
         val uid  = auth.currentUser?.uid ?: error("No hay sesión activa")
@@ -134,6 +140,7 @@ class FirebaseUserRepository(context: Context) : UserRepository {
     }
 
     private suspend fun fetchOrCreateUserProfile(uid: String, email: String, name: String): UserProfile {
+        runCatching { Purchases.sharedInstance.awaitLogIn(uid) }
         val ref  = firestore.collection("users").document(uid)
         val snap = ref.get().await()
         return if (snap.exists()) {

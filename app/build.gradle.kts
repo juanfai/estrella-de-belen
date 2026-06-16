@@ -98,6 +98,9 @@ dependencies {
     // Google Sign-In
     implementation(libs.play.services.auth)
 
+    // RevenueCat
+    implementation(libs.revenuecat)
+
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
     testImplementation(libs.junit)

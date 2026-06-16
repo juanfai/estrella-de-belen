@@ -1,5 +1,6 @@
 package com.estrelladebelen.app.ui.screens.paywall
 
+import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -13,14 +14,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.estrelladebelen.app.R
 import com.estrelladebelen.app.ui.theme.Moonbeam
-import kotlinx.coroutines.launch
 
 private enum class Plan(
     val productId: String,
@@ -49,11 +51,25 @@ private enum class Plan(
 }
 
 @Composable
-fun PaywallScreen(onDismiss: () -> Unit) {
+fun PaywallScreen(
+    onDismiss: () -> Unit,
+    viewModel: PaywallViewModel = viewModel()
+) {
+    val activity = LocalContext.current as Activity
     var selectedPlan by remember { mutableStateOf(Plan.ANNUAL) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val comingSoon = stringResource(R.string.paywall_coming_soon)
+    val restoreMsg = stringResource(R.string.paywall_already_subscribed)
+    val nothingMsg = stringResource(R.string.paywall_nothing_to_restore)
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is PaywallEvent.Error          -> snackbarHostState.showSnackbar(event.message)
+                is PaywallEvent.RestoreSuccess -> { snackbarHostState.showSnackbar(restoreMsg); onDismiss() }
+                is PaywallEvent.NothingToRestore -> snackbarHostState.showSnackbar(nothingMsg)
+            }
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -117,7 +133,8 @@ fun PaywallScreen(onDismiss: () -> Unit) {
             Spacer(Modifier.height(28.dp))
 
             Button(
-                onClick = { scope.launch { snackbarHostState.showSnackbar(comingSoon) } },
+                onClick = { viewModel.purchase(activity, selectedPlan.productId) },
+                enabled = !viewModel.isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
@@ -126,17 +143,26 @@ fun PaywallScreen(onDismiss: () -> Unit) {
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text(
-                    text = stringResource(R.string.paywall_subscribe),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+                if (viewModel.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.paywall_subscribe),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             Spacer(Modifier.height(12.dp))
 
             TextButton(
-                onClick = { scope.launch { snackbarHostState.showSnackbar(comingSoon) } }
+                onClick = { viewModel.restorePurchases() },
+                enabled = !viewModel.isLoading
             ) {
                 Text(
                     text = stringResource(R.string.paywall_restore),
@@ -159,10 +185,7 @@ fun PaywallScreen(onDismiss: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Text(
-                    text = "·",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = "·", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(onClick = {}) {
                     Text(
                         text = stringResource(R.string.paywall_privacy),

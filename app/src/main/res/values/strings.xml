@@ -89,6 +89,9 @@
     <!-- Network -->
     <string name="no_internet">Sin conexión a internet</string>
 
+    <!-- RevenueCat — reemplazá con tu API key pública de Android (RC Dashboard → API Keys) -->
+    <string name="revenuecat_api_key" translatable="false">goog_sJFNoyJdHMNdtfhRQSmYpQqZXsW</string>
+
     <!-- Subscription / Paywall -->
     <string name="badge_premium">✦ Premium</string>
     <string name="settings_subscription">Suscripción</string>
@@ -107,5 +110,6 @@
     <string name="paywall_terms">Términos de uso</string>
     <string name="paywall_privacy">Política de privacidad</string>
     <string name="paywall_coming_soon">Las suscripciones estarán disponibles pronto</string>
-    <string name="paywall_already_subscribed">Activa</string>
+    <string name="paywall_already_subscribed">¡Suscripción restaurada con éxito!</string>
+    <string name="paywall_nothing_to_restore">No se encontraron compras anteriores</string>
 </resources>
