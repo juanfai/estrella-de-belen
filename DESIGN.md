@@ -432,18 +432,24 @@ match /profile_photos/{uid} {
 
 | Tarea | Estado |
 |---|---|
-| Cuenta RevenueCat creada | ✅ Creada |
-| App en Google Play Console | ⏳ Verificando |
-| Productos de suscripción en Play Console | ⏳ Espera verificación |
-| RevenueCat vinculado a Play Console | ⏳ Espera verificación |
+| Cuenta RevenueCat creada | ✅ Done |
+| App en Google Play Console | ✅ Done |
+| Productos de suscripción en Play Console (`estrella_monthly/quarterly/annual`) | ✅ Done |
+| RevenueCat vinculado a Play Console (Service Account) | ✅ Done |
+| Entitlement `premium` en RevenueCat | ✅ Done |
+| Offerings + packages en RevenueCat | ✅ Done |
+| API key de RevenueCat en `strings.xml` | ✅ Done |
 | `isFree` en modelo `Meditation` + Firestore | ✅ Done |
 | `subscriptionStatus` en `UserProfile` | ✅ Done |
 | Checkbox `isFree` en web admin panel | ✅ Done |
 | Overlay premium en `MeditationCard` (35% black + bookmark badge) | ✅ Done |
-| `PaywallScreen` (UI + RevenueCat purchase flow) | ✅ Done (stub — muestra "Próximamente") |
+| `RevenueCatSubscriptionRepository` (SDK real, reemplaza stub) | ✅ Done |
+| `PaywallScreen` + `PaywallViewModel` (flujo de compra real) | ✅ Done |
 | Fila "Suscripción" en SettingsScreen | ✅ Done |
-| `SubscriptionRepository` (RevenueCat SDK) | ✅ Done (interfaz + StubSubscriptionRepository) |
-| Sincronización de entitlement al login | ⏳ Pendiente (requiere RevenueCat + Play Console) |
+| RC `logIn(uid)` al hacer sign-in con Firebase | ✅ Done |
+| RC `logOut()` al cerrar sesión | ✅ Done |
+| Sincronización de entitlement al login | ✅ Done |
+| Probar flujo de compra en Internal Testing | ⏳ Pendiente |
 
 ---
 
@@ -481,7 +487,7 @@ match /profile_photos/{uid} {
 | Web app ID in `web-admin/public/app.js` | ⚠️ Pending |
 | SHA-1 debug keystore en Firebase Console (requerido para Google Sign-In Android) | ⚠️ Pending |
 | Streak + stats write-back on session complete | ✅ Done |
-| Subscription model (RevenueCat + PaywallScreen + content gating) | ✅ UI done / stub — espera Play Console |
+| Subscription model (RevenueCat + PaywallScreen + content gating) | ✅ Done — flujo real activo |
 | PlayerScreen light mode edge-to-edge fix | ✅ Done |
 | isFree checkbox en web admin panel | ✅ Done |
 
