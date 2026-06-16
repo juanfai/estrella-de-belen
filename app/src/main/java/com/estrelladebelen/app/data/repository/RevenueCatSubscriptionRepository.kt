@@ -38,7 +38,7 @@ class RevenueCatSubscriptionRepository : SubscriptionRepository {
         return runCatching {
             val offerings = Purchases.sharedInstance.awaitOfferings()
             val pkg = offerings.current?.availablePackages
-                ?.find { it.product.id == productId }
+                ?.find { it.product.id == productId || it.product.id.startsWith("$productId:") }
                 ?: error("Producto no encontrado: $productId")
 
             val result = Purchases.sharedInstance.awaitPurchase(
