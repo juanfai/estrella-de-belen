@@ -127,10 +127,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 .onSuccess { list ->
                     allMeditations = list
                     val categories = list.map { it.category }.filter { it.isNotBlank() }.distinct()
+                    val dayIndex = (System.currentTimeMillis() / 86_400_000L).toInt()
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         meditations = list,
-                        featured = list.firstOrNull { it.isFree } ?: list.firstOrNull(),
+                        featured = list.getOrNull(dayIndex % list.size),
                         availableCategories = categories
                     )
                 }

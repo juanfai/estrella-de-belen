@@ -182,13 +182,13 @@ private fun FeaturedCard(
             if (isPremiumLocked) {
                 Surface(
                     shape = RoundedCornerShape(bottomStart = 10.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                    color = Color(0xFF7FD8F8),
                     modifier = Modifier.align(Alignment.TopEnd)
                 ) {
                     Text(
                         text = stringResource(R.string.badge_premium),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
+                        color = Color(0xFF0D3344),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
