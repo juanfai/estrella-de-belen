@@ -90,10 +90,10 @@ private fun randomSpark(maxDist: Float): Spark {
         maxDistance = maxDist * (rng.nextFloat() * 0.4f + 0.6f),
         size        = rng.nextFloat() * 2.8f + 1.4f,
         color       = when (rng.nextInt(6)) {
-            0    -> Color(0xFFFFE4EB) // rosa claro
-            1    -> Color(0xFFFFF2EE) // Moonbeam
-            2    -> Color(0xFFFDDEE6) // rosa muy suave
-            else -> Color(0xFFFFF0F5) // blanco rosado
+            0    -> Color(0x80FFE4EB) // rosa claro
+            1    -> Color(0x80FFF2EE) // Moonbeam
+            2    -> Color(0x80FDDEE6) // rosa muy suave
+            else -> Color(0x80FFF0F5) // blanco rosado
         }
     )
 }
