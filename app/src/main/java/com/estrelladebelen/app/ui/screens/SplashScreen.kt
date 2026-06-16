@@ -43,10 +43,10 @@ fun SplashScreen(onReady: () -> Unit) {
         ) {
             // El Logo SVG/PNG
             Image(
-                painter = painterResource(id = R.drawable.logo),
+                painter = painterResource(id = R.drawable.logo_luz),
                 contentDescription = "Logo Estrella de Belén",
                 modifier = Modifier
-                    .size(160.dp) // Aumentado ligeramente para que luzca el SVG
+                    .size(220.dp)
                     .padding(bottom = 24.dp)
             )
 

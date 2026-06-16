@@ -83,9 +83,9 @@ fun PaywallScreen(onDismiss: () -> Unit) {
             }
 
             Image(
-                painter = painterResource(R.drawable.logo),
+                painter = painterResource(R.drawable.logo_luz),
                 contentDescription = null,
-                modifier = Modifier.size(88.dp)
+                modifier = Modifier.size(130.dp)
             )
             Spacer(Modifier.height(16.dp))
             Text(

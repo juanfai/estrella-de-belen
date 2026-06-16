@@ -94,9 +94,9 @@ fun LoginScreen(viewModel: AuthViewModel) {
                 .padding(horizontal = 32.dp)
         ) {
             Image(
-                painter = painterResource(R.drawable.logo),
+                painter = painterResource(R.drawable.logo_luz),
                 contentDescription = null,
-                modifier = Modifier.size(72.dp)
+                modifier = Modifier.size(110.dp)
             )
             Spacer(Modifier.height(16.dp))
             Text(
