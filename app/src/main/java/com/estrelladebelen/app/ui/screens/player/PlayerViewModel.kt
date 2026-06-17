@@ -101,8 +101,6 @@ class PlayerViewModel : ViewModel() {
                 haloColor     = haloColor,
                 playbackEnded = false
             )
-            // Start breathing here — deterministic order, no race with LaunchedEffect.
-            startBreathingAnimation()
             connectService(context, meditation)
         }
     }
