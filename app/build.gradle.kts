@@ -14,15 +14,25 @@ android {
         applicationId = "com.estrelladebelen.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 3
+        versionCode = 7
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("../Keys_EDB")
+            storePassword = "Luc4sN1l0"
+            keyAlias = "key0"
+            keyPassword = "Luc4sN1l0"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
