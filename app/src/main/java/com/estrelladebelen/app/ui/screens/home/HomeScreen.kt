@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,6 +52,7 @@ fun HomeScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeScreenContent(
     uiState: HomeUiState,
@@ -62,6 +65,10 @@ private fun HomeScreenContent(
     onCategorySelected: (String?) -> Unit,
     onPaywallClick: () -> Unit
 ) {
+    var showFilterSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+    val hasActiveFilters = uiState.activeFilter != DurationFilter.ALL || uiState.activeCategory != null
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         contentPadding = PaddingValues(bottom = 24.dp),
@@ -72,18 +79,40 @@ private fun HomeScreenContent(
             .background(MaterialTheme.colorScheme.background)
     ) {
         item(span = { GridItemSpan(2) }) {
-            Column(modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 28.dp, bottom = 4.dp)) {
-                Text(
-                    text = greeting(userName),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Normal,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = stringResource(R.string.home_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(
+                modifier = Modifier.padding(start = 20.dp, end = 8.dp, top = 28.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = greeting(userName),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = stringResource(R.string.home_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                BadgedBox(
+                    badge = {
+                        if (hasActiveFilters) Badge()
+                    }
+                ) {
+                    IconButton(onClick = { showFilterSheet = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "Filtros",
+                            tint = if (hasActiveFilters)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
 
@@ -96,23 +125,6 @@ private fun HomeScreenContent(
                     onClick = { if (featuredLocked) onPaywallClick() else onMeditationClick(featured.id) },
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
-            }
-        }
-
-        item(span = { GridItemSpan(2) }) {
-            Column {
-                DurationFilterRow(
-                    activeFilter = uiState.activeFilter,
-                    onFilterSelected = onFilterSelected,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-                if (uiState.availableCategories.isNotEmpty()) {
-                    CategoryFilterRow(
-                        categories = uiState.availableCategories,
-                        activeCategory = uiState.activeCategory,
-                        onCategorySelected = onCategorySelected
-                    )
-                }
             }
         }
 
@@ -138,6 +150,62 @@ private fun HomeScreenContent(
                     onDownloadClick = { onDownloadClick(meditation.id) },
                     modifier = Modifier.padding(start = paddingStart, end = paddingEnd)
                 )
+            }
+        }
+    }
+
+    if (showFilterSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showFilterSheet = false },
+            sheetState = sheetState,
+        ) {
+            Column(modifier = Modifier.padding(bottom = 32.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Filtros",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (hasActiveFilters) {
+                        TextButton(onClick = {
+                            onFilterSelected(DurationFilter.ALL)
+                            onCategorySelected(null)
+                        }) {
+                            Text("Limpiar")
+                        }
+                    }
+                }
+
+                Text(
+                    text = "Duración",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
+                DurationFilterRow(
+                    activeFilter = uiState.activeFilter,
+                    onFilterSelected = onFilterSelected
+                )
+
+                if (uiState.availableCategories.isNotEmpty()) {
+                    Text(
+                        text = "Categoría",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
+                    CategoryFilterRow(
+                        categories = uiState.availableCategories,
+                        activeCategory = uiState.activeCategory,
+                        onCategorySelected = onCategorySelected
+                    )
+                }
             }
         }
     }
@@ -235,11 +303,12 @@ private fun DurationFilterRow(
     onFilterSelected: (DurationFilter) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.padding(top = 4.dp, bottom = 0.dp)
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        modifier = modifier
     ) {
-        DurationFilter.entries.forEach { filter ->
+        items(DurationFilter.entries) { filter ->
             val selected = activeFilter == filter
             FilterChip(
                 selected = selected,
@@ -247,7 +316,8 @@ private fun DurationFilterRow(
                 label = {
                     Text(
                         text = stringResource(filter.labelRes()),
-                        style = MaterialTheme.typography.labelMedium
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1
                     )
                 },
                 colors = FilterChipDefaults.filterChipColors(
@@ -268,7 +338,6 @@ private fun CategoryFilterRow(
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(horizontal = 20.dp),
-        modifier = Modifier.padding(top = 2.dp, bottom = 6.dp)
     ) {
         item {
             FilterChip(

@@ -19,8 +19,8 @@
     <string name="home_subtitle">¿Qué necesitás hoy?</string>
     <string name="home_featured_label">✦  Meditación del día</string>
     <string name="filter_all">Todas</string>
-    <string name="filter_5min">5 min</string>
-    <string name="filter_10min">10 min</string>
+    <string name="filter_5min">&lt; 5 min</string>
+    <string name="filter_10min">5 – 10 min</string>
     <string name="filter_20min">20+ min</string>
 
     <!-- Card -->
