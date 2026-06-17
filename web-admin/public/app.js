@@ -9,7 +9,7 @@ import {
   doc, serverTimestamp, orderBy, query, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import {
-  getStorage, ref, uploadBytesResumable, getDownloadURL
+  getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject
 } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-storage.js";
 
 // ── Firebase config ───────────────────────────────────────────────────────────
@@ -28,10 +28,11 @@ const db      = getFirestore(app);
 const storage = getStorage(app);
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let editingId        = null;
-let uploadedImageUrl = null;
-let uploadedAudioUrl = null;
-let pendingDeleteId  = null;
+let editingId          = null;
+let uploadedImageUrl   = null;
+let uploadedAudioUrl   = null;
+let pendingDeleteId    = null;
+let pendingDeleteData  = null;
 let draggedEl        = null;
 let dragFromHandle   = false;
 
@@ -206,7 +207,7 @@ function buildCard(id, data) {
   card.addEventListener("dragend",    onDragEnd);
 
   card.querySelector(".edit-btn").addEventListener("click",   () => openModal(id, data));
-  card.querySelector(".delete-btn").addEventListener("click", () => confirmDelete(id, data.title));
+  card.querySelector(".delete-btn").addEventListener("click", () => confirmDelete(id, data.title, data));
   return card;
 }
 
@@ -360,10 +361,14 @@ document.getElementById("save-btn").addEventListener("click", async () => {
 
   try {
     if (imageFile) {
+      const oldImageUrl = uploadedImageUrl;
       uploadedImageUrl = await uploadFile(imageFile, `meditations/images/${Date.now()}_${imageFile.name}`, "image");
+      if (editingId) await deleteStorageFile(oldImageUrl);
     }
     if (audioFile) {
+      const oldAudioUrl = uploadedAudioUrl;
       uploadedAudioUrl = await uploadFile(audioFile, `meditations/audio/${Date.now()}_${audioFile.name}`, "audio");
+      if (editingId) await deleteStorageFile(oldAudioUrl);
     }
 
     const payload = {
@@ -402,6 +407,20 @@ function setSaving(on) {
   const spin = document.getElementById("save-spinner");
   btn.disabled = on;
   on ? (hide(text), show(spin)) : (show(text), hide(spin));
+}
+
+// ── Storage cleanup ───────────────────────────────────────────────────────────
+async function deleteStorageFile(url) {
+  if (!url) return;
+  try {
+    const decoded  = decodeURIComponent(url);
+    const startIdx = decoded.indexOf("/o/") + 3;
+    const endIdx   = decoded.indexOf("?");
+    const path     = decoded.substring(startIdx, endIdx);
+    await deleteObject(ref(storage, path));
+  } catch (e) {
+    console.warn("No se pudo borrar archivo de Storage:", e.message);
+  }
 }
 
 // ── File upload ───────────────────────────────────────────────────────────────
@@ -454,8 +473,9 @@ function getAudioDuration(file) {
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
-function confirmDelete(id, title) {
-  pendingDeleteId = id;
+function confirmDelete(id, title, data) {
+  pendingDeleteId   = id;
+  pendingDeleteData = data;
   document.getElementById("delete-name").textContent = title || "esta meditación";
   show("delete-overlay");
 }
@@ -468,8 +488,11 @@ document.getElementById("delete-confirm").addEventListener("click", async () => 
   if (!pendingDeleteId) return;
   try {
     await deleteDoc(doc(db, "meditations", pendingDeleteId));
+    await deleteStorageFile(pendingDeleteData?.imageUrl);
+    await deleteStorageFile(pendingDeleteData?.audioUrl);
     hide("delete-overlay");
-    pendingDeleteId = null;
+    pendingDeleteId   = null;
+    pendingDeleteData = null;
     loadMeditations();
   } catch (e) {
     alert("Error al eliminar: " + e.message);
