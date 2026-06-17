@@ -64,12 +64,15 @@ users/{uid}
   displayName: String
   email: String
   favorites: [meditationId, ...]
+  seenMeditations: [meditationId, ...]  // populated on full playback completion
   totalSessions: Int
   totalMinutes: Int
   streak: Int                 // consecutive days
   lastSessionDate: String     // for streak calculation
   notificationsEnabled: Boolean
   notificationTime: String    // "08:00"
+  subscriptionStatus: String  // "free" | "active" — cached from RevenueCat
+  photoUrl: String            // Firebase Storage URL
 ```
 
 ---
@@ -114,15 +117,18 @@ Bottom Nav (2 tabs)
 ### HomeScreen
 - Dynamic time-based greeting: "Buenos días / tardes / noches, [name]"
 - Large featured card: "Meditación del día" (random or curated)
-- Duration filter chips: Todas / 5 min / 10 min / 20+ min
+- Filter icon (`Icons.Default.Tune`) top-right opens a **ModalBottomSheet** with:
+  - Duración: `< 5 min` / `5–10 min` / `20+ min`
+  - Categoría: all available categories (dynamic from data)
+  - "Limpiar" button (shown only when filters are active)
 - 2-column `LazyVerticalGrid` of meditation cards
-- Each card: thumbnail or halo color preview, title, duration, "Nuevo" badge (first 7 days), ♡ favorite, ↓ download
+- Each card: thumbnail or halo color preview, title, duration, "Nuevo" badge (first 7 days, hidden once fully watched), ♡ favorite, ↓ download
 - Meditations loaded from Firestore via `HomeViewModel`
 
 ### PlayerScreen
 - **Pure black background** — borde a borde, sin franjas del tema claro
 - Real-time pulsing glow animation via `GlowPreviewRenderer` (TextureView)
-- Breathing animation starts immediately (before audio loads)
+- Glow stays small and still while audio loads; breathing animation only starts when playback begins (or in stub/no-audio mode)
 - **Controls only visible on tap** → auto-hide after 3 seconds
 - Controls: title, seek bar with timestamps, ⏮ ⏸ ⏭, ♡ favorite, ↓ save offline
 - `FLAG_KEEP_SCREEN_ON` active while on this screen
@@ -164,6 +170,7 @@ Bottom Nav (2 tabs)
 
 ### "New" badge
 - `Meditation.isNew` computed: `createdAt < 7 days ago`
+- Badge hidden once the user fully completes playback (`STATE_ENDED`): `meditationId` is added to `seenMeditations` in Firestore via `markAsSeen()`
 
 ### Day streak
 - Updated in Firestore on session completion
@@ -192,6 +199,7 @@ Hosted on Firebase Hosting (`estrella-de-belen-85a2b` site) — plain HTML + Fir
 - Guarda `createdAt` server timestamp en docs nuevos
 - Mensajes de error de auth en español
 - Badges de texto en las cards: **"Gratis"** (verde) y **"Premium"** (azul `#246489`) en la fila de metadata
+- **Storage cleanup automático**: al editar o eliminar una meditación, el panel elimina el archivo viejo de Firebase Storage (imagen y/o audio) usando `deleteObject`. Parsea la URL para extraer el path relativo. Los errores se ignoran silenciosamente (el archivo puede no existir si fue reemplazado manualmente)
 
 **Deploy:**
 ```bash
@@ -270,16 +278,24 @@ Firebase Console → Authentication → Sign-in method → Google → Activar �
 ### Google Sign-In — setup requerido
 
 1. Firebase Console → Authentication → Sign-in method → **Google** → Activar → Guardar
-2. Registrar el **SHA-1** del debug keystore en Firebase Console → Project settings → Android app → Add fingerprint:
-   ```bash
-   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-   ```
+2. Registrar los **SHA-1** en Firebase Console → Project settings → Android app → Add fingerprint:
+   - **Debug keystore** (para builds desde Android Studio):
+     ```bash
+     keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+     ```
+   - **Upload keystore** (`../Keys_EDB`, alias `key0`, storepass `Luc4sN1l0`):
+     ```bash
+     keytool -list -v -keystore ../Keys_EDB -alias key0 -storepass Luc4sN1l0
+     ```
+     SHA-1: `28:35:C5:...`
+   - **Play App Signing key** (el que Google usa para re-firmar el AAB en Play Store): extraído de `deployment_cert.der` descargado desde Play Console → Configuración → Integridad de la app:
+     ```bash
+     keytool -printcert -file deployment_cert.der
+     ```
+     SHA-1: `79:6C:E8:...` ← necesario para que Google Sign-In funcione en builds instalados desde Play Store
 3. Descargar el nuevo `google-services.json` y reemplazar el de `app/`
-4. El SHA-256 del debug keystore ya está registrado:
-   ```
-   5C:16:F2:04:27:C4:88:7E:BA:EA:D3:29:B2:86:A3:C3:EA:C7:F3:FA:52:CA:68:76:28:3A:EC:B6:F3:4D:E9:83
-   ```
-   El SHA-1 es necesario para Google Sign-In específicamente. SHA-256 era para App Links (ya no usado).
+
+**Por qué se necesitan tres SHA-1:** Play App Signing re-firma el APK con una clave diferente a la del upload keystore. Firebase valida el SHA-1 de la firma instalada en el dispositivo — si no coincide, el flujo de Google Sign-In falla silenciosamente.
 
 ### Web Admin — access control
 
@@ -400,7 +416,14 @@ PaywallScreen
   ├── Logo + tagline
   ├── 3 opciones: Mensual / Trimestral / Anual (anual destacado)
   ├── Botón "Suscribirse" → Google Play Billing flow via RevenueCat
+  │       → onSuccess → SubscriptionSuccessScreen
   └── "Restaurar compras" + links Términos / Privacidad
+
+SubscriptionSuccessScreen
+  ├── Logo con glow animado (breathing Lavender)
+  ├── "¡Ya sos Premium!" + subtitle
+  ├── 3 beneficios con checkmarks
+  └── "Comenzar" → Home (limpia back stack)
 ```
 
 ### Firestore security rules — cambios necesarios
@@ -415,18 +438,17 @@ match /meditations/{id} {
 ### Firebase Storage rules (actuales)
 
 ```
-match /meditations/{allPaths=**} {
-  allow read;
-  allow write: if request.auth != null;
+match /profile_photos/{fileName} {
+  allow read:  if request.auth != null;
+  allow write: if request.auth != null && fileName == request.auth.uid + '.jpg';
 }
-match /audio/{allPaths=**} {
-  allow read, write: if request.auth != null;
-}
-match /profile_photos/{uid} {
-  allow read;
-  allow write: if request.auth != null && request.auth.uid == uid;
+match /{allPaths=**} {
+  allow read:  if request.auth != null;
+  allow write: if request.auth != null && request.auth.token.admin == true;
 }
 ```
+
+**Nota:** Firebase no permite puntos en path wildcards (`{uid}.jpg` es inválido). Se usa `{fileName}` con condición explícita en el `allow write`.
 
 ### Checklist de implementación
 
@@ -449,7 +471,9 @@ match /profile_photos/{uid} {
 | RC `logIn(uid)` al hacer sign-in con Firebase | ✅ Done |
 | RC `logOut()` al cerrar sesión | ✅ Done |
 | Sincronización de entitlement al login | ✅ Done |
-| Probar flujo de compra en Internal Testing | ⏳ Pendiente |
+| Probar flujo de compra en Internal Testing | ✅ Done — confirmado que el flujo funciona |
+| SubscriptionSuccessScreen tras compra exitosa | ✅ Done |
+| License Testers configurados en Play Console (compras gratis para testing) | ⏳ Pendiente |
 
 ---
 
@@ -483,13 +507,23 @@ match /profile_photos/{uid} {
 | Admin custom claim setup (`set-admin.js`) | ✅ Done |
 | Firebase Hosting deploy | ✅ Done |
 | MiniPlayer | ❌ Removed |
-| `google-services.json` in `app/` | ⚠️ Pending (needs Firebase Console) |
-| Web app ID in `web-admin/public/app.js` | ⚠️ Pending |
-| SHA-1 debug keystore en Firebase Console (requerido para Google Sign-In Android) | ⚠️ Pending |
+| `google-services.json` in `app/` | ✅ Done |
+| Web app ID in `web-admin/public/app.js` | ✅ Done |
+| SHA-1 debug keystore en Firebase Console (requerido para Google Sign-In Android) | ✅ Done |
+| SHA-1 de Play App Signing en Firebase Console (Google Sign-In en Play Store builds) | ✅ Done — extraído de `deployment_cert.der` |
 | Streak + stats write-back on session complete | ✅ Done |
 | Subscription model (RevenueCat + PaywallScreen + content gating) | ✅ Done — flujo real activo |
 | PlayerScreen light mode edge-to-edge fix | ✅ Done |
 | isFree checkbox en web admin panel | ✅ Done |
+| App signing hardcoded in `build.gradle.kts` (`../Keys_EDB`, alias `key0`) | ✅ Done |
+| Google Sign-In en Play Store builds (Play App Signing SHA-1 registrado) | ✅ Done |
+| Firebase Storage rules — profile photo write (sin puntos en wildcards) | ✅ Done |
+| Admin web panel — Storage cleanup en edit/delete | ✅ Done |
+| HomeScreen — filtros en ModalBottomSheet (reemplaza chips visibles) | ✅ Done |
+| NavigationBar — texto seleccionado en `onSecondaryContainer` | ✅ Done |
+| NavigationBar — animación con `AnimatedVisibility` + `expandVertically` | ✅ Done |
+| Badge "Nuevo" oculto tras ver la meditación entera (`seenMeditations`) | ✅ Done |
+| PlayerScreen — glow quieto durante carga de audio | ✅ Done |
 
 ---
 

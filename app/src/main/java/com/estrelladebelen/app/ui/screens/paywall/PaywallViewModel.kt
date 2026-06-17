@@ -28,9 +28,8 @@ class PaywallViewModel : ViewModel() {
             isLoading = false
             result.onFailure { e ->
                 _events.emit(PaywallEvent.Error(e.message ?: "Error al procesar el pago"))
-            }.onSuccess {
-                // Check if entitlement is actually active (purchase may have been cancelled silently)
-                subscriptionRepo.syncSubscriptionStatus()
+            }.onSuccess { isActive ->
+                if (isActive) _events.emit(PaywallEvent.PurchaseSuccess)
             }
         }
     }
@@ -54,6 +53,7 @@ class PaywallViewModel : ViewModel() {
 
 sealed class PaywallEvent {
     data class Error(val message: String) : PaywallEvent()
+    object PurchaseSuccess : PaywallEvent()
     object RestoreSuccess : PaywallEvent()
     object NothingToRestore : PaywallEvent()
 }

@@ -53,6 +53,7 @@ private enum class Plan(
 @Composable
 fun PaywallScreen(
     onDismiss: () -> Unit,
+    onSuccess: () -> Unit,
     viewModel: PaywallViewModel = viewModel()
 ) {
     val activity = LocalContext.current as Activity
@@ -64,8 +65,9 @@ fun PaywallScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is PaywallEvent.Error          -> snackbarHostState.showSnackbar(event.message)
-                is PaywallEvent.RestoreSuccess -> { snackbarHostState.showSnackbar(restoreMsg); onDismiss() }
+                is PaywallEvent.Error            -> snackbarHostState.showSnackbar(event.message)
+                is PaywallEvent.PurchaseSuccess  -> onSuccess()
+                is PaywallEvent.RestoreSuccess   -> { snackbarHostState.showSnackbar(restoreMsg); onDismiss() }
                 is PaywallEvent.NothingToRestore -> snackbarHostState.showSnackbar(nothingMsg)
             }
         }

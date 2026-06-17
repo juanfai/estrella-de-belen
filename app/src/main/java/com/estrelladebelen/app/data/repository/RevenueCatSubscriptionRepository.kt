@@ -34,7 +34,7 @@ class RevenueCatSubscriptionRepository : SubscriptionRepository {
         }
     }
 
-    override suspend fun purchase(activity: Activity, productId: String): Result<Unit> {
+    override suspend fun purchase(activity: Activity, productId: String): Result<Boolean> {
         return runCatching {
             val offerings = Purchases.sharedInstance.awaitOfferings()
             val pkg = offerings.current?.availablePackages
@@ -44,7 +44,9 @@ class RevenueCatSubscriptionRepository : SubscriptionRepository {
             val result = Purchases.sharedInstance.awaitPurchase(
                 PurchaseParams.Builder(activity, pkg).build()
             )
-            _isSubscribed.value = result.customerInfo.isPremium
+            val active = result.customerInfo.isPremium
+            _isSubscribed.value = active
+            active
         }.recoverUserCancellation()
     }
 
@@ -62,11 +64,11 @@ class RevenueCatSubscriptionRepository : SubscriptionRepository {
 private val CustomerInfo.isPremium: Boolean
     get() = entitlements[ENTITLEMENT_PREMIUM]?.isActive == true
 
-// Convierte cancelación del usuario en Result.success(Unit) en lugar de error
-private fun <T> Result<T>.recoverUserCancellation(): Result<Unit> = fold(
-    onSuccess = { Result.success(Unit) },
+// Convierte cancelación del usuario en Result.success(false) en lugar de error
+private fun Result<Boolean>.recoverUserCancellation(): Result<Boolean> = fold(
+    onSuccess = { Result.success(it) },
     onFailure = { e ->
         val cancelled = (e as? PurchasesException)?.error?.code == PurchasesErrorCode.PurchaseCancelledError
-        if (cancelled) Result.success(Unit) else Result.failure(e)
+        if (cancelled) Result.success(false) else Result.failure(e)
     }
 )

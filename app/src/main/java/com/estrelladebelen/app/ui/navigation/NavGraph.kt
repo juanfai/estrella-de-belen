@@ -32,6 +32,7 @@ import com.estrelladebelen.app.ui.screens.home.HomeScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerViewModel
 import com.estrelladebelen.app.ui.screens.paywall.PaywallScreen
+import com.estrelladebelen.app.ui.screens.paywall.SubscriptionSuccessScreen
 import com.estrelladebelen.app.ui.screens.profile.DownloadsScreen
 import com.estrelladebelen.app.ui.screens.profile.FavoritesScreen
 import com.estrelladebelen.app.ui.screens.profile.ProfileScreen
@@ -179,7 +180,24 @@ fun AppNavGraph() {
             }
 
             composable(Screen.Paywall.route) {
-                PaywallScreen(onDismiss = { navController.popBackStack() })
+                PaywallScreen(
+                    onDismiss = { navController.popBackStack() },
+                    onSuccess = {
+                        navController.navigate(Screen.SubscriptionSuccess.route) {
+                            popUpTo(Screen.Paywall.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(Screen.SubscriptionSuccess.route) {
+                SubscriptionSuccessScreen(
+                    onContinue = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
             }
 
             composable(Screen.Favorites.route) {

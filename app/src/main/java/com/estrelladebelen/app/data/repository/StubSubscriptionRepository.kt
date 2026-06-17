@@ -10,7 +10,7 @@ class StubSubscriptionRepository : SubscriptionRepository {
     private val _isSubscribed = MutableStateFlow(false)
     override val isSubscribed: Flow<Boolean> = _isSubscribed.asStateFlow()
 
-    override suspend fun purchase(activity: Activity, productId: String): Result<Unit> =
+    override suspend fun purchase(activity: Activity, productId: String): Result<Boolean> =
         Result.failure(UnsupportedOperationException("Not yet available"))
 
     override suspend fun restorePurchases(): Result<Boolean> = Result.success(false)

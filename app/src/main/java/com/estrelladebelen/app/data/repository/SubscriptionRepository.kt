@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface SubscriptionRepository {
     val isSubscribed: Flow<Boolean>
-    suspend fun purchase(activity: Activity, productId: String): Result<Unit>
+    suspend fun purchase(activity: Activity, productId: String): Result<Boolean>
     suspend fun restorePurchases(): Result<Boolean>
     suspend fun syncSubscriptionStatus()
 }

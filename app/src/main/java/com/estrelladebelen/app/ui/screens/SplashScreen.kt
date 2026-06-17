@@ -90,10 +90,10 @@ private fun randomSpark(maxDist: Float): Spark {
         maxDistance = maxDist * (rng.nextFloat() * 0.4f + 0.6f),
         size        = rng.nextFloat() * 2.8f + 1.4f,
         color       = when (rng.nextInt(6)) {
-            0    -> Color(0x80FFE4EB) // rosa claro
-            1    -> Color(0x80FFF2EE) // Moonbeam
-            2    -> Color(0x80FDDEE6) // rosa muy suave
-            else -> Color(0x80FFF0F5) // blanco rosado
+            0    -> Color(0x80FFE4EB)
+            1    -> Color(0x80FFF2EE)
+            2    -> Color(0x80FDDEE6)
+            else -> Color(0x80FFF0F5)
         }
     )
 }
@@ -105,7 +105,6 @@ private fun StarfieldBackground() {
         val w = constraints.maxWidth.toFloat()
         val h = constraints.maxHeight.toFloat()
         val maxDist = sqrt(w * w / 4f + h * h / 4f) * 1.1f
-        // El logo es el top de la Column centrada; su centro está ~40dp arriba del centro de pantalla
         val originOffsetY = with(density) { (-40).dp.toPx() }
 
         var sparks by remember { mutableStateOf(List(55) { randomSpark(maxDist) }) }
@@ -130,13 +129,11 @@ private fun StarfieldBackground() {
                 val x = cx + cos(spark.angle) * spark.distance
                 val y = cy + sin(spark.angle) * spark.distance
 
-                // halo suave exterior
                 drawCircle(
                     color  = spark.color.copy(alpha = a * 0.25f),
                     radius = spark.size * 3.5f,
                     center = Offset(x, y)
                 )
-                // núcleo brillante
                 drawCircle(
                     color  = spark.color.copy(alpha = a),
                     radius = spark.size,

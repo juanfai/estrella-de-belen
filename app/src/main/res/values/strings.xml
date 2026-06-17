@@ -112,4 +112,12 @@
     <string name="paywall_coming_soon">Las suscripciones estarán disponibles pronto</string>
     <string name="paywall_already_subscribed">¡Suscripción restaurada con éxito!</string>
     <string name="paywall_nothing_to_restore">No se encontraron compras anteriores</string>
+
+    <!-- Subscription success screen -->
+    <string name="success_title">¡Ya sos Premium!</string>
+    <string name="success_subtitle">Accedé a todas las meditaciones sin límites</string>
+    <string name="success_benefit_1">Todas las meditaciones disponibles</string>
+    <string name="success_benefit_2">Descargás para escuchar sin internet</string>
+    <string name="success_benefit_3">Nuevos contenidos al instante</string>
+    <string name="success_cta">Comenzar</string>
 </resources>
