@@ -33,7 +33,8 @@ fun MeditationCard(
     onDownloadClick: () -> Unit,
     modifier: Modifier = Modifier,
     isDownloading: Boolean = false,
-    isPremiumLocked: Boolean = false
+    isPremiumLocked: Boolean = false,
+    isSeen: Boolean = false
 ) {
     val shape = RoundedCornerShape(16.dp)
 
@@ -63,7 +64,7 @@ fun MeditationCard(
                         )
                     }
 
-                    if (meditation.isNew && !isPremiumLocked) {
+                    if (meditation.isNew && !isPremiumLocked && !isSeen) {
                         Surface(
                             shape = RoundedCornerShape(bottomEnd = 10.dp),
                             color = MaterialTheme.colorScheme.tertiaryContainer,

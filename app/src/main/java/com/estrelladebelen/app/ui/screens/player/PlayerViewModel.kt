@@ -167,12 +167,16 @@ class PlayerViewModel : ViewModel() {
                     sessionReady = false
                     animationJob?.cancel()
                     val durationMinutes = (_uiState.value.durationMs / 60_000L).toInt().coerceAtLeast(1)
+                    val finishedId = _uiState.value.meditation?.id
                     _uiState.value = _uiState.value.copy(
                         meditation    = null,
                         isPlaying     = false,
                         playbackEnded = true
                     )
-                    viewModelScope.launch { userRepo.recordSession(durationMinutes) }
+                    viewModelScope.launch {
+                        userRepo.recordSession(durationMinutes)
+                        finishedId?.let { userRepo.markAsSeen(it) }
+                    }
                 }
             }
         }

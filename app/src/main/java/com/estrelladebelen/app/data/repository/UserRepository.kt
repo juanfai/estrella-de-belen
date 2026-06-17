@@ -13,6 +13,7 @@ interface UserRepository {
     suspend fun deleteAccount(): Result<Unit>
     suspend fun toggleFavorite(meditationId: String)
     suspend fun recordSession(durationMinutes: Int)
+    suspend fun markAsSeen(meditationId: String)
     suspend fun updateNotificationSettings(enabled: Boolean, time: String)
     suspend fun uploadAndSavePhoto(uri: android.net.Uri, context: android.content.Context)
 }

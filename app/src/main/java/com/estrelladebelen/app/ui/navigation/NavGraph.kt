@@ -1,8 +1,11 @@
 package com.estrelladebelen.app.ui.navigation
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -66,7 +69,11 @@ fun AppNavGraph() {
 
     Scaffold(
         bottomBar = {
-            if (showBottomBar) {
+            AnimatedVisibility(
+                visible = showBottomBar,
+                enter = expandVertically(tween(300)) + fadeIn(tween(300)),
+                exit  = shrinkVertically(tween(300)) + fadeOut(tween(300))
+            ) {
                 NavigationBar {
                     val currentDest = currentBackStack?.destination
                     bottomNavItems.forEach { (screen, meta) ->
@@ -128,12 +135,13 @@ fun AppNavGraph() {
 
             composable(Screen.Home.route) {
                 HomeScreen(
-                    userName    = userProfile?.displayName ?: "",
-                    favorites   = userProfile?.favorites ?: emptyList(),
+                    userName          = userProfile?.displayName ?: "",
+                    favorites         = userProfile?.favorites ?: emptyList(),
+                    seenMeditations   = userProfile?.seenMeditations ?: emptyList(),
                     onMeditationClick = { id ->
                         navController.navigate(Screen.Player.createRoute(id))
                     },
-                    onPaywallClick = { navController.navigate(Screen.Paywall.route) },
+                    onPaywallClick  = { navController.navigate(Screen.Paywall.route) },
                     onFavoriteClick = { id -> profileViewModel.toggleFavorite(id) }
                 )
             }

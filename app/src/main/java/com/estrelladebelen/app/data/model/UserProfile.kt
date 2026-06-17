@@ -12,5 +12,6 @@ data class UserProfile(
     val notificationsEnabled: Boolean = false,
     val notificationTime: String = "08:00",
     val subscriptionStatus: String = "free",
-    val photoUrl: String = ""
+    val photoUrl: String = "",
+    val seenMeditations: List<String> = emptyList()
 )

@@ -132,6 +132,19 @@ class FirebaseUserRepository(context: Context) : UserRepository {
             .await()
     }
 
+    override suspend fun markAsSeen(meditationId: String) {
+        val uid = auth.currentUser?.uid ?: return
+        val ref = firestore.collection("users").document(uid)
+        firestore.runTransaction { tx ->
+            @Suppress("UNCHECKED_CAST")
+            val seen = (tx.get(ref).get("seenMeditations") as? List<String>)?.toMutableList() ?: mutableListOf()
+            if (meditationId !in seen) {
+                seen.add(meditationId)
+                tx.update(ref, "seenMeditations", seen)
+            }
+        }.await()
+    }
+
     override suspend fun updateNotificationSettings(enabled: Boolean, time: String) {
         val uid = auth.currentUser?.uid ?: return
         firestore.collection("users").document(uid)
@@ -155,11 +168,14 @@ class FirebaseUserRepository(context: Context) : UserRepository {
     private fun com.google.firebase.firestore.DocumentSnapshot.toUserProfile(uid: String): UserProfile? {
         if (!exists()) return null
         @Suppress("UNCHECKED_CAST")
+        val favorites = (get("favorites") as? List<String>) ?: emptyList()
+        @Suppress("UNCHECKED_CAST")
+        val seenMeditations = (get("seenMeditations") as? List<String>) ?: emptyList()
         return UserProfile(
             uid                  = uid,
             displayName          = getString("displayName") ?: "",
             email                = getString("email") ?: "",
-            favorites            = (get("favorites") as? List<String>) ?: emptyList(),
+            favorites            = favorites,
             totalSessions        = getLong("totalSessions")?.toInt() ?: 0,
             totalMinutes         = getLong("totalMinutes")?.toInt() ?: 0,
             streak               = getLong("streak")?.toInt() ?: 0,
@@ -167,7 +183,8 @@ class FirebaseUserRepository(context: Context) : UserRepository {
             notificationsEnabled = getBoolean("notificationsEnabled") ?: false,
             notificationTime     = getString("notificationTime") ?: "08:00",
             subscriptionStatus   = getString("subscriptionStatus") ?: "free",
-            photoUrl             = getString("photoUrl") ?: ""
+            photoUrl             = getString("photoUrl") ?: "",
+            seenMeditations      = seenMeditations
         )
     }
 
@@ -182,6 +199,7 @@ class FirebaseUserRepository(context: Context) : UserRepository {
         "notificationsEnabled" to notificationsEnabled,
         "notificationTime"     to notificationTime,
         "subscriptionStatus"   to subscriptionStatus,
-        "photoUrl"             to photoUrl
+        "photoUrl"             to photoUrl,
+        "seenMeditations"      to seenMeditations
     )
 }

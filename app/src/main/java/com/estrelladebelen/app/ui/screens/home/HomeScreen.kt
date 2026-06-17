@@ -32,6 +32,7 @@ import java.util.Calendar
 fun HomeScreen(
     userName: String,
     favorites: List<String>,
+    seenMeditations: List<String>,
     onMeditationClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
     onPaywallClick: () -> Unit,
@@ -43,6 +44,7 @@ fun HomeScreen(
         uiState            = uiState,
         userName           = userName,
         favorites          = favorites,
+        seenMeditations    = seenMeditations,
         onMeditationClick  = onMeditationClick,
         onFavoriteClick    = onFavoriteClick,
         onDownloadClick    = { id -> viewModel.downloadMeditation(context, id) },
@@ -58,6 +60,7 @@ private fun HomeScreenContent(
     uiState: HomeUiState,
     userName: String,
     favorites: List<String>,
+    seenMeditations: List<String> = emptyList(),
     onMeditationClick: (String) -> Unit,
     onFavoriteClick: (String) -> Unit,
     onDownloadClick: (String) -> Unit,
@@ -142,6 +145,7 @@ private fun HomeScreenContent(
                 MeditationCard(
                     meditation      = meditation,
                     isFavorite      = meditation.id in favorites,
+                    isSeen          = meditation.id in seenMeditations,
                     isDownloaded    = meditation.id in uiState.downloads,
                     isDownloading   = meditation.id in uiState.downloadingIds,
                     isPremiumLocked = isPremiumLocked,
