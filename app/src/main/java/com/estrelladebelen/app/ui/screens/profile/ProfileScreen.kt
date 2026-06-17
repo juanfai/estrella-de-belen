@@ -302,7 +302,7 @@ fun ProfileScreen(
         ProfileActionRow(
             icon = Icons.Filled.Star,
             label = stringResource(R.string.settings_subscription),
-            trailingLabel = if (isSubscribed) stringResource(R.string.paywall_already_subscribed) else null,
+            trailingLabel = if (isSubscribed) stringResource(R.string.subscription_status_active) else null,
             onClick = onSubscriptionClick
         )
 

@@ -16,4 +16,7 @@ class StubSubscriptionRepository : SubscriptionRepository {
     override suspend fun restorePurchases(): Result<Boolean> = Result.success(false)
 
     override suspend fun syncSubscriptionStatus() = Unit
+
+    override suspend fun getSubscriptionInfo(): SubscriptionInfo =
+        SubscriptionInfo(null, null, false)
 }

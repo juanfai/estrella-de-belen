@@ -33,6 +33,7 @@ import com.estrelladebelen.app.ui.screens.player.PlayerScreen
 import com.estrelladebelen.app.ui.screens.player.PlayerViewModel
 import com.estrelladebelen.app.ui.screens.paywall.PaywallScreen
 import com.estrelladebelen.app.ui.screens.paywall.SubscriptionSuccessScreen
+import com.estrelladebelen.app.ui.screens.profile.SubscriptionManagementScreen
 import com.estrelladebelen.app.ui.screens.profile.DownloadsScreen
 import com.estrelladebelen.app.ui.screens.profile.FavoritesScreen
 import com.estrelladebelen.app.ui.screens.profile.ProfileScreen
@@ -53,6 +54,7 @@ fun AppNavGraph() {
 
     val authUiState  by authViewModel.uiState.collectAsState()
     val userProfile  by profileViewModel.userProfile.collectAsStateWithLifecycle()
+    val isSubscribed by profileViewModel.isSubscribed.collectAsStateWithLifecycle()
 
     val currentBackStack by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStack?.destination?.route
@@ -174,7 +176,10 @@ fun AppNavGraph() {
                     },
                     onFavoritesClick    = { navController.navigate(Screen.Favorites.route) },
                     onDownloadsClick    = { navController.navigate(Screen.Downloads.route) },
-                    onSubscriptionClick = { navController.navigate(Screen.Paywall.route) },
+                    onSubscriptionClick = {
+                        if (isSubscribed) navController.navigate(Screen.SubscriptionManagement.route)
+                        else navController.navigate(Screen.Paywall.route)
+                    },
                     viewModel = profileViewModel
                 )
             }
@@ -198,6 +203,10 @@ fun AppNavGraph() {
                         }
                     }
                 )
+            }
+
+            composable(Screen.SubscriptionManagement.route) {
+                SubscriptionManagementScreen(onBack = { navController.popBackStack() })
             }
 
             composable(Screen.Favorites.route) {

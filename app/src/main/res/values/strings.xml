@@ -113,6 +113,14 @@
     <string name="paywall_already_subscribed">¡Suscripción restaurada con éxito!</string>
     <string name="paywall_nothing_to_restore">No se encontraron compras anteriores</string>
 
+    <!-- Subscription management screen -->
+    <string name="subscription_manage_title">Mi suscripción</string>
+    <string name="subscription_status_active">Activa</string>
+    <string name="subscription_renews_on">Se renueva el %1$s</string>
+    <string name="subscription_expires_on">Vence el %1$s</string>
+    <string name="subscription_manage_button">Administrar suscripción</string>
+    <string name="subscription_manage_hint">Para cancelar o cambiar de plan, usá el botón de arriba. Los cambios se aplican al final del período actual.</string>
+
     <!-- Subscription success screen -->
     <string name="success_title">¡Ya sos Premium!</string>
     <string name="success_subtitle">Accedé a todas las meditaciones sin límites</string>

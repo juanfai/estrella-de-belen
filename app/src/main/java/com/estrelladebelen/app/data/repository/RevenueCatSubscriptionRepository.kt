@@ -50,6 +50,18 @@ class RevenueCatSubscriptionRepository : SubscriptionRepository {
         }.recoverUserCancellation()
     }
 
+    override suspend fun getSubscriptionInfo(): SubscriptionInfo {
+        return runCatching {
+            val info = Purchases.sharedInstance.awaitCustomerInfo()
+            val entitlement = info.entitlements[ENTITLEMENT_PREMIUM]?.takeIf { it.isActive }
+            SubscriptionInfo(
+                productId      = entitlement?.productIdentifier?.substringBefore(":"),
+                expirationDate = entitlement?.expirationDate,
+                willRenew      = entitlement?.willRenew == true
+            )
+        }.getOrDefault(SubscriptionInfo(null, null, false))
+    }
+
     override suspend fun restorePurchases(): Result<Boolean> {
         return runCatching {
             val info = Purchases.sharedInstance.awaitRestore()

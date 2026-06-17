@@ -8,8 +8,9 @@ sealed class Screen(val route: String) {
     object Profile  : Screen("profile")
     object Favorites  : Screen("favorites")
     object Downloads  : Screen("downloads")
-    object Paywall              : Screen("paywall")
-    object SubscriptionSuccess  : Screen("subscription_success")
+    object Paywall                  : Screen("paywall")
+    object SubscriptionSuccess      : Screen("subscription_success")
+    object SubscriptionManagement   : Screen("subscription_management")
     object CheckEmail           : Screen("check_email")
 
     object Player : Screen("player/{meditationId}") {
