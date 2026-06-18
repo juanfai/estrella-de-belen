@@ -337,11 +337,6 @@ fun ProfileScreen(
             )
         }
 
-        ProfileActionRow(
-            icon = Icons.Filled.Language,
-            label = stringResource(R.string.settings_language),
-            trailingLabel = stringResource(R.string.settings_language_soon)
-        ) {}
         ProfileActionRow(icon = Icons.Filled.Info, label = stringResource(R.string.settings_about)) {}
 
         Spacer(Modifier.height(28.dp))
