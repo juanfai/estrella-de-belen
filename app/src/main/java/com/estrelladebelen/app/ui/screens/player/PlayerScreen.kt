@@ -4,6 +4,8 @@ import android.view.TextureView
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -18,11 +20,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.estrelladebelen.app.R
 import com.estrelladebelen.app.render.GlowPreviewRenderer
@@ -42,6 +47,8 @@ fun PlayerScreen(
 
     var controlsVisible by remember { mutableStateOf(false) }
     val glowRenderer = remember { GlowPreviewRenderer() }
+    val introAlpha = remember { Animatable(0f) }
+    var introDone by remember { mutableStateOf(false) }
 
     // Keep screen on while player is active
     DisposableEffect(Unit) {
@@ -50,9 +57,16 @@ fun PlayerScreen(
         onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
 
-    // Load meditation — breathing animation is started inside loadMeditation()
+    // Load meditation + run intro, then start playback
     LaunchedEffect(meditationId) {
+        introAlpha.snapTo(0f)
+        introDone = false
         viewModel.loadMeditation(context, meditationId)
+        introAlpha.animateTo(1f, tween(1800))
+        delay(3000)
+        introAlpha.animateTo(0f, tween(1800))
+        introDone = true
+        viewModel.startPlayback()
     }
 
     // Navigate back when audio ends — delay matches the exit fade duration
@@ -97,6 +111,7 @@ fun PlayerScreen(
             .fillMaxSize()
             .background(PlayerBackground)
             .clickable(
+                enabled = introDone,
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             ) { controlsVisible = !controlsVisible }
@@ -111,9 +126,30 @@ fun PlayerScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Controls overlay — only visible on tap
+        // Intro overlay — fades in then out before playback starts
+        if (introAlpha.value > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(introAlpha.value)
+                    .background(PlayerBackground),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.player_intro),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Light,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 32.sp,
+                    color = Color.White.copy(alpha = 0.80f),
+                    modifier = Modifier.padding(horizontal = 48.dp)
+                )
+            }
+        }
+
+        // Controls overlay — only visible on tap, after intro
         AnimatedVisibility(
-            visible = controlsVisible,
+            visible = controlsVisible && introDone,
             enter = fadeIn(),
             exit  = fadeOut(),
             modifier = Modifier.fillMaxSize()

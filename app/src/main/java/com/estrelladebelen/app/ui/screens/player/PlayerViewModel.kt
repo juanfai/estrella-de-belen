@@ -65,6 +65,7 @@ class PlayerViewModel : ViewModel() {
     private var breathingTime = 0f
 
     @Volatile private var rmsFrames: FloatArray? = null
+    @Volatile private var pendingPlay = false
 
     // True only after STATE_READY is received for the current session.
     // Guards against media3 replaying STATE_ENDED / isPlaying=false from the
@@ -75,6 +76,7 @@ class PlayerViewModel : ViewModel() {
         // Synchronous cleanup: cancel all jobs and release the old controller
         // so its listener can't fire events that would cancel the new animation.
         sessionReady = false
+        pendingPlay  = false
         animationJob?.cancel();  animationJob = null
         progressJob?.cancel();   progressJob  = null
         decodeJob?.cancel();     decodeJob    = null
@@ -114,11 +116,12 @@ class PlayerViewModel : ViewModel() {
             controller = controllerFuture?.get()
             controller?.addListener(playerListener)
             if (meditation.audioUrl.isNotBlank()) {
+                controller?.setPlayWhenReady(false)
                 controller?.setMediaItem(MediaItem.fromUri(meditation.audioUrl))
                 controller?.prepare()
-                controller?.play()
+                if (pendingPlay) { pendingPlay = false; controller?.play() }
             } else {
-                startBreathingAnimation()
+                if (pendingPlay) { pendingPlay = false; startBreathingAnimation() }
             }
         }, { command -> command.run() })
     }
@@ -195,6 +198,16 @@ class PlayerViewModel : ViewModel() {
     fun seekTo(fraction: Float) {
         val durationMs = _uiState.value.durationMs
         if (durationMs > 0) controller?.seekTo((fraction * durationMs).toLong())
+    }
+
+    fun startPlayback() {
+        val ctrl = controller
+        val audioUrl = _uiState.value.meditation?.audioUrl ?: ""
+        when {
+            ctrl != null && audioUrl.isNotBlank() -> ctrl.play()
+            ctrl != null                          -> startBreathingAnimation()
+            else                                  -> pendingPlay = true
+        }
     }
 
     // Breathing animation used when there is no audio (stub) or as idle animation
